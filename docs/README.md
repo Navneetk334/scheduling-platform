@@ -10,6 +10,12 @@ Central index for platform documentation.
   each audience needs.
 - [Delivery Roadmap](./product/roadmap.md) — phased build sequence.
 
+## API
+
+- [API Reference](./api/README.md) — REST + GraphQL, auth (JWT/refresh/API keys),
+  rate limiting, idempotency, errors, pagination, webhooks, jobs, observability,
+  OpenAPI/SDK generation.
+
 ## Engineering
 
 - [Root README](../README.md) — architecture, stack, local setup, scripts.

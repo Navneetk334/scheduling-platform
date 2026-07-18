@@ -16,6 +16,21 @@ export const envSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(16, 'BETTER_AUTH_SECRET must be at least 16 chars.'),
   BETTER_AUTH_URL: z.string().url().default('http://localhost:4000'),
 
+  // --- JWT / tokens ---
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 chars.'),
+  JWT_ACCESS_TTL: z.string().default('15m'),
+  JWT_REFRESH_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(30),
+
+  // --- Webhooks ---
+  WEBHOOK_SIGNING_SECRET: z.string().min(16).default('whsec_dev_change_me_please_now'),
+
+  // --- Rate limiting (fixed window) ---
+  RATE_LIMIT_WINDOW_SEC: z.coerce.number().int().min(1).default(60),
+  RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(120),
+
+  // --- CORS: comma-separated origins (falls back to WEB_URL) ---
+  CORS_ORIGINS: z.string().optional(),
+
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 });
 

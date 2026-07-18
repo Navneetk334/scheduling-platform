@@ -7,7 +7,19 @@ import type { Prisma } from '@invincible/database';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
+import { WebhookEvent } from '../../webhooks/webhook-events';
+import { WebhooksService } from '../../webhooks/webhooks.service';
 import { AvailabilityService } from '../availability/availability.service';
+
+interface BookingEventShape {
+  id: string;
+  organizationId: string;
+  meetingTypeId: string;
+  reference: string;
+  status: string;
+  startTime: Date;
+  endTime: Date;
+}
 
 @Injectable()
 export class BookingsService {
@@ -15,7 +27,19 @@ export class BookingsService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly availability: AvailabilityService,
+    private readonly webhooks: WebhooksService,
   ) {}
+
+  private emit(event: string, booking: BookingEventShape): void {
+    void this.webhooks.dispatch(booking.organizationId, event, {
+      id: booking.id,
+      reference: booking.reference,
+      status: booking.status,
+      meetingTypeId: booking.meetingTypeId,
+      startTime: booking.startTime.toISOString(),
+      endTime: booking.endTime.toISOString(),
+    });
+  }
 
   /**
    * Create a booking with strong protection against double-booking:
@@ -72,7 +96,7 @@ export class BookingsService {
     }
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const booking = await this.prisma.$transaction(async (tx) => {
         const confirmedCount = await tx.booking.count({
           where: { meetingTypeId: meetingType.id, startTime: start, status: 'CONFIRMED' },
         });
@@ -118,6 +142,8 @@ export class BookingsService {
           include: { guests: true },
         });
       });
+      this.emit(WebhookEvent.BookingCreated, booking);
+      return booking;
     } finally {
       await release();
     }
@@ -177,7 +203,7 @@ export class BookingsService {
     }
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      const booking = await this.prisma.$transaction(async (tx) => {
         const confirmedCount = await tx.booking.count({
           where: { meetingTypeId: meetingType.id, startTime: start, status: 'CONFIRMED' },
         });
@@ -220,19 +246,23 @@ export class BookingsService {
           include: { guests: true },
         });
       });
+      this.emit(WebhookEvent.BookingRescheduled, booking);
+      return booking;
     } finally {
       await release();
     }
   }
 
   async cancelByReference(reference: string, reason?: string) {
-    const booking = await this.getByReference(reference);
-    if (booking.status === 'CANCELLED') return booking;
-    return this.prisma.booking.update({
-      where: { id: booking.id },
+    const existing = await this.getByReference(reference);
+    if (existing.status === 'CANCELLED') return existing;
+    const booking = await this.prisma.booking.update({
+      where: { id: existing.id },
       data: { status: 'CANCELLED', cancelReason: reason ?? null, cancelledAt: new Date() },
       include: { guests: true },
     });
+    this.emit(WebhookEvent.BookingCancelled, booking);
+    return booking;
   }
 
   listForOrganization(organizationId: string, options: { upcoming?: boolean } = {}) {
