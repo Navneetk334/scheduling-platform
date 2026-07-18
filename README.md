@@ -131,12 +131,22 @@ Production images are defined in `apps/api/Dockerfile` and `apps/web/Dockerfile`
 brings up the entire stack. CI (`.github/workflows/ci.yml`) runs lint,
 typecheck, tests, app builds, and Docker image smoke builds.
 
+## Product documentation
+
+- [Feature Catalog](docs/product/feature-catalog.md) — the full capability set,
+  grouped by domain, with delivery status.
+- [Persona → Feature Matrix](docs/product/persona-matrix.md) — audiences and the
+  features they need.
+- [Delivery Roadmap](docs/product/roadmap.md) — phased build sequence.
+
 ## Roadmap (next phases)
 
 - Calendar sync (Google / Microsoft / Apple) and video links (Meet / Zoom / Teams)
-- Notifications (Resend email, Twilio SMS) and reminders via BullMQ
+- Notifications (Resend email, Twilio SMS / WhatsApp) and reminders via BullMQ
 - Billing (Stripe), round-robin & collective event types, SSO/SAML
 - Realtime updates (WebSockets), analytics, and audit logging
+
+See the [full roadmap](docs/product/roadmap.md) for the complete phase plan.
 
 ## License
 
