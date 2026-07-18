@@ -1,0 +1,41 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Centralized dependency versions shared across the workspace.
+# Reference in package.json as: "react": "catalog:"
+catalog:
+  # --- Core language / runtime ---
+  typescript: ^5.7.3
+  "@types/node": ^22.10.5
+
+  # --- React / Next.js ---
+  react: ^19.0.0
+  react-dom: ^19.0.0
+  "@types/react": ^19.0.7
+  "@types/react-dom": ^19.0.3
+  next: ^15.1.4
+
+  # --- Data / forms / state ---
+  zod: ^3.24.1
+  "@tanstack/react-query": ^5.64.1
+  react-hook-form: ^7.54.2
+  "@hookform/resolvers": ^3.10.0
+  framer-motion: ^11.16.4
+
+  # --- Prisma ---
+  prisma: ^6.2.1
+  "@prisma/client": ^6.2.1
+
+  # --- Testing ---
+  vitest: ^2.1.8
+  "@vitest/coverage-v8": ^2.1.8
+  "@playwright/test": ^1.49.1
+
+  # --- Lint / format ---
+  eslint: ^9.18.0
+  prettier: ^3.4.2
+
+  # --- Build ---
+  tsup: ^8.3.5
+  tsx: ^4.19.2

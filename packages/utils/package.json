@@ -1,0 +1,48 @@
+{
+  "name": "@invincible/utils",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./scheduling": {
+      "types": "./dist/scheduling/index.d.ts",
+      "import": "./dist/scheduling/index.js",
+      "require": "./dist/scheduling/index.cjs"
+    },
+    "./validation": {
+      "types": "./dist/validation/index.d.ts",
+      "import": "./dist/validation/index.js",
+      "require": "./dist/validation/index.cjs"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist .turbo coverage *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@invincible/types": "workspace:*",
+    "luxon": "^3.5.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.4.2",
+    "@vitest/coverage-v8": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
