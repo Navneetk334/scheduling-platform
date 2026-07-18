@@ -1,12 +1,12 @@
-import type { AvailableSlot, Booking, EventType, Organization, Schedule } from '@invincible/types';
+import type { AvailableSlot, Booking, MeetingType, Organization, Schedule } from '@invincible/types';
 import type {
   CancelBookingInput,
   CreateBookingInput,
-  CreateEventTypeInput,
+  CreateMeetingTypeInput,
   CreateOrganizationInput,
   CreateScheduleInput,
   InviteMemberInput,
-  UpdateEventTypeInput,
+  UpdateMeetingTypeInput,
   UpdateScheduleInput,
 } from '@invincible/utils';
 
@@ -59,27 +59,27 @@ export class SchedulesResource {
   }
 }
 
-export class EventTypesResource {
+export class MeetingTypesResource {
   constructor(private readonly http: HttpClient) {}
 
-  list(options: OrgScoped): Promise<EventType[]> {
-    return this.http.get('/event-types', options);
+  list(options: OrgScoped): Promise<MeetingType[]> {
+    return this.http.get('/meeting-types', options);
   }
 
-  get(id: string, options: OrgScoped): Promise<EventType> {
-    return this.http.get(`/event-types/${id}`, options);
+  get(id: string, options: OrgScoped): Promise<MeetingType> {
+    return this.http.get(`/meeting-types/${id}`, options);
   }
 
-  create(input: CreateEventTypeInput, options: OrgScoped): Promise<EventType> {
-    return this.http.post('/event-types', input, options);
+  create(input: CreateMeetingTypeInput, options: OrgScoped): Promise<MeetingType> {
+    return this.http.post('/meeting-types', input, options);
   }
 
-  update(id: string, input: UpdateEventTypeInput, options: OrgScoped): Promise<EventType> {
-    return this.http.patch(`/event-types/${id}`, input, options);
+  update(id: string, input: UpdateMeetingTypeInput, options: OrgScoped): Promise<MeetingType> {
+    return this.http.patch(`/meeting-types/${id}`, input, options);
   }
 
   remove(id: string, options: OrgScoped): Promise<void> {
-    return this.http.delete(`/event-types/${id}`, options);
+    return this.http.delete(`/meeting-types/${id}`, options);
   }
 }
 
@@ -101,7 +101,7 @@ export interface BookingPage {
     logoUrl: string | null;
     timeZone: string;
   };
-  eventType: {
+  meetingType: {
     id: string;
     title: string;
     slug: string;
@@ -123,11 +123,11 @@ export class PublicResource {
   }
 
   getAvailability(
-    eventTypeId: string,
+    meetingTypeId: string,
     params: { from: string; to: string; timeZone: string },
     options?: RequestOptions,
   ): Promise<AvailableSlot[]> {
-    return this.http.get(`/public/event-types/${eventTypeId}/availability`, {
+    return this.http.get(`/public/meeting-types/${meetingTypeId}/availability`, {
       ...options,
       query: params,
     });

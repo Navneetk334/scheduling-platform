@@ -8,7 +8,7 @@ export const guestSchema = z.object({
 });
 
 export const createBookingSchema = z.object({
-  eventTypeId: z.string().min(1),
+  meetingTypeId: z.string().min(1),
   /** Slot start, ISO-8601. Validated against live availability server-side. */
   startTime: z.string().datetime({ offset: true }),
   invitee: z.object({
@@ -33,7 +33,7 @@ export const cancelBookingSchema = z.object({
 
 export const availabilityQuerySchema = z
   .object({
-    eventTypeId: z.string().min(1),
+    meetingTypeId: z.string().min(1),
     from: calendarDateSchema,
     to: calendarDateSchema,
     timeZone: timeZoneSchema,

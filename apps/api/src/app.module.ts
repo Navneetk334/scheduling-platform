@@ -5,7 +5,7 @@ import { AppConfigModule } from './config/app-config.module';
 import { HealthModule } from './health/health.module';
 import { AvailabilityModule } from './modules/availability/availability.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
-import { EventTypesModule } from './modules/event-types/event-types.module';
+import { MeetingTypesModule } from './modules/meeting-types/meeting-types.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { PublicModule } from './modules/public/public.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
@@ -23,7 +23,7 @@ import { RedisModule } from './redis/redis.module';
     HealthModule,
     OrganizationsModule,
     SchedulesModule,
-    EventTypesModule,
+    MeetingTypesModule,
     AvailabilityModule,
     BookingsModule,
     PublicModule,

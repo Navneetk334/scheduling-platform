@@ -10,7 +10,7 @@ import { signOut, useSession } from '@/lib/auth-client';
 
 const navItems = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exact: true },
-  { href: '/dashboard/event-types', label: 'Event Types', icon: Ticket, exact: false },
+  { href: '/dashboard/meeting-types', label: 'Meeting Types', icon: Ticket, exact: false },
   { href: '/dashboard/schedules', label: 'Availability', icon: Clock, exact: false },
   { href: '/dashboard/bookings', label: 'Bookings', icon: CalendarDays, exact: false },
 ];

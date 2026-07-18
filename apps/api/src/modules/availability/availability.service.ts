@@ -5,7 +5,7 @@ import type { AvailableSlot } from '@invincible/types';
 
 import { PrismaService } from '../../prisma/prisma.service';
 
-import { toEngineEventType, toEngineSchedule } from './availability.mapper';
+import { toEngineMeetingType, toEngineSchedule } from './availability.mapper';
 
 const availabilityInclude = {
   workingHours: true,
@@ -63,7 +63,7 @@ export class AvailabilityService {
       now,
       fromDate,
       toDate,
-      eventType: toEngineEventType(meetingType),
+      meetingType: toEngineMeetingType(meetingType),
       schedule: toEngineSchedule(meetingType.availability),
       busyIntervals,
       seatMap,

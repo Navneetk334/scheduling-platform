@@ -40,7 +40,7 @@ export function BookingExperience({ page }: { page: BookingPage }) {
   const today = todayInZone(timeZone);
 
   const availability = useAvailability({
-    eventTypeId: page.eventType.id,
+    meetingTypeId: page.meetingType.id,
     from: today,
     to: addDays(today, WINDOW_DAYS),
     timeZone,
@@ -68,7 +68,7 @@ export function BookingExperience({ page }: { page: BookingPage }) {
   const onSubmit = handleSubmit((values) => {
     if (!selectedSlot) return;
     createBooking.mutate({
-      eventTypeId: page.eventType.id,
+      meetingTypeId: page.meetingType.id,
       startTime: selectedSlot,
       invitee: { name: values.name, email: values.email, timeZone, notes: values.notes },
       guests: [],
@@ -87,26 +87,26 @@ export function BookingExperience({ page }: { page: BookingPage }) {
           <div className="flex items-center gap-3">
             <Avatar>
               <AvatarFallback>
-                {page.eventType.host.name.slice(0, 2).toUpperCase()}
+                {page.meetingType.host.name.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div>
               <p className="text-sm text-muted-foreground">{page.organization.name}</p>
-              <p className="font-medium">{page.eventType.host.name}</p>
+              <p className="font-medium">{page.meetingType.host.name}</p>
             </div>
           </div>
-          <h1 className="text-xl font-semibold tracking-tight">{page.eventType.title}</h1>
-          {page.eventType.description ? (
-            <p className="text-sm text-muted-foreground">{page.eventType.description}</p>
+          <h1 className="text-xl font-semibold tracking-tight">{page.meetingType.title}</h1>
+          {page.meetingType.description ? (
+            <p className="text-sm text-muted-foreground">{page.meetingType.description}</p>
           ) : null}
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-center gap-2">
-              <Clock className="size-4" aria-hidden /> {page.eventType.durationMinutes} minutes
+              <Clock className="size-4" aria-hidden /> {page.meetingType.durationMinutes} minutes
             </li>
-            {page.eventType.locations[0] ? (
+            {page.meetingType.locations[0] ? (
               <li className="flex items-center gap-2">
                 <Video className="size-4" aria-hidden />
-                {page.eventType.locations[0].type.replaceAll('_', ' ').toLowerCase()}
+                {page.meetingType.locations[0].type.replaceAll('_', ' ').toLowerCase()}
               </li>
             ) : null}
             <li className="flex items-center gap-2">

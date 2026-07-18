@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AppError, slugify } from '@invincible/utils';
-import type { CreateEventTypeInput, UpdateEventTypeInput } from '@invincible/utils';
+import type { CreateMeetingTypeInput, UpdateMeetingTypeInput } from '@invincible/utils';
 import type { Prisma } from '@invincible/database';
 
 import { PrismaService } from '../../prisma/prisma.service';
@@ -10,12 +10,12 @@ const meetingTypeInclude = {
 };
 
 /**
- * Manages meeting types (a.k.a. event types). Route paths remain `/event-types`
+ * Manages meeting types (a.k.a. meeting types). Route paths remain `/meeting-types`
  * for API stability; the underlying model is `MeetingType` with normalized
  * `Location` rows linked via `MeetingTypeLocation`.
  */
 @Injectable()
-export class EventTypesService {
+export class MeetingTypesService {
   constructor(private readonly prisma: PrismaService) {}
 
   list(organizationId: string) {
@@ -35,7 +35,7 @@ export class EventTypesService {
     return meetingType;
   }
 
-  async create(organizationId: string, ownerId: string, input: CreateEventTypeInput) {
+  async create(organizationId: string, ownerId: string, input: CreateMeetingTypeInput) {
     const availability = await this.prisma.availability.findFirst({
       where: { id: input.scheduleId, organizationId },
     });
@@ -74,7 +74,7 @@ export class EventTypesService {
     });
   }
 
-  async update(organizationId: string, id: string, input: UpdateEventTypeInput) {
+  async update(organizationId: string, id: string, input: UpdateMeetingTypeInput) {
     await this.get(organizationId, id);
     const { locations, ...scalars } = input;
 
@@ -104,7 +104,7 @@ export class EventTypesService {
     tx: Prisma.TransactionClient,
     organizationId: string,
     meetingTypeId: string,
-    locations: CreateEventTypeInput['locations'],
+    locations: CreateMeetingTypeInput['locations'],
   ): Promise<void> {
     await tx.meetingTypeLocation.deleteMany({ where: { meetingTypeId } });
     let position = 0;

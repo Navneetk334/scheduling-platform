@@ -20,8 +20,8 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   try {
     const page = await loadPage(orgSlug, eventSlug);
     return {
-      title: `${page.eventType.title} · ${page.organization.name}`,
-      description: page.eventType.description ?? `Book ${page.eventType.title}`,
+      title: `${page.meetingType.title} · ${page.organization.name}`,
+      description: page.meetingType.description ?? `Book ${page.meetingType.title}`,
     };
   } catch {
     return { title: 'Booking' };

@@ -117,10 +117,10 @@ pnpm dev              # runs api (:4000) and web (:3000) via Turborepo
 | GET/POST | `/api/v1/organizations`                                   | session     |
 | POST   | `/api/v1/organizations/invitations`                         | org member  |
 | CRUD   | `/api/v1/schedules`                                         | org member  |
-| CRUD   | `/api/v1/event-types`                                       | org member  |
+| CRUD   | `/api/v1/meeting-types`                                      | org member  |
 | GET    | `/api/v1/bookings`                                          | org member  |
 | GET    | `/api/v1/public/booking-pages/:orgSlug/:eventSlug`          | public      |
-| GET    | `/api/v1/public/event-types/:id/availability`               | public      |
+| GET    | `/api/v1/public/meeting-types/:id/availability`             | public      |
 | POST   | `/api/v1/public/bookings`                                   | public      |
 | POST   | `/api/v1/public/bookings/:reference/cancel`                 | public      |
 

@@ -13,16 +13,16 @@ import type {
   UserId,
   MembershipId,
   ScheduleId,
-  EventTypeId,
+  MeetingTypeId,
   BookingId,
-  AttendeeId,
+  GuestId,
   ISODateString,
 } from './common';
 import type {
-  AttendeeRole,
+  GuestRole,
   BookingStatus,
   CalendarProvider,
-  EventTypeKind,
+  MeetingTypeKind,
   LocationType,
   MembershipStatus,
   OrganizationRole,
@@ -81,18 +81,18 @@ export interface Schedule extends AuditFields {
   readonly overrides: readonly DateOverride[];
 }
 
-export interface EventTypeLocation {
+export interface MeetingTypeLocation {
   readonly type: LocationType;
   /** Free-form address/URL/phone depending on `type`. */
   readonly value: string | null;
 }
 
-export interface EventType extends AuditFields, SoftDeletable {
-  readonly id: EventTypeId;
+export interface MeetingType extends AuditFields, SoftDeletable {
+  readonly id: MeetingTypeId;
   readonly organizationId: OrganizationId;
   readonly ownerId: UserId;
   readonly scheduleId: ScheduleId;
-  readonly kind: EventTypeKind;
+  readonly kind: MeetingTypeKind;
   readonly title: string;
   readonly slug: string;
   readonly description: string | null;
@@ -109,14 +109,14 @@ export interface EventType extends AuditFields, SoftDeletable {
   readonly slotIntervalMinutes: number;
   /** Max concurrent bookings per slot (relevant for GROUP). */
   readonly seatsPerSlot: number;
-  readonly locations: readonly EventTypeLocation[];
+  readonly locations: readonly MeetingTypeLocation[];
   readonly isActive: boolean;
   readonly color: string;
 }
 
-export interface Attendee {
-  readonly id: AttendeeId;
-  readonly role: AttendeeRole;
+export interface Guest {
+  readonly id: GuestId;
+  readonly role: GuestRole;
   readonly name: string;
   readonly email: string;
   readonly timeZone: IANATimeZone;
@@ -126,13 +126,13 @@ export interface Attendee {
 export interface Booking extends AuditFields {
   readonly id: BookingId;
   readonly organizationId: OrganizationId;
-  readonly eventTypeId: EventTypeId;
+  readonly meetingTypeId: MeetingTypeId;
   readonly status: BookingStatus;
   readonly startTime: ISODateString;
   readonly endTime: ISODateString;
   readonly timeZone: IANATimeZone;
-  readonly attendees: readonly Attendee[];
-  readonly location: EventTypeLocation | null;
+  readonly guests: readonly Guest[];
+  readonly location: MeetingTypeLocation | null;
   readonly meetingUrl: string | null;
   readonly notes: string | null;
   readonly cancelReason: string | null;

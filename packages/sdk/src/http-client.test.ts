@@ -37,7 +37,7 @@ describe('HttpClient via createApiClient', () => {
     });
 
     const [url] = fetchMock.mock.calls[0]!;
-    expect(url).toContain('/public/event-types/evt_1/availability');
+    expect(url).toContain('/public/meeting-types/evt_1/availability');
     expect(url).toContain('from=2026-07-13');
     expect(url).toContain('timeZone=UTC');
   });
@@ -53,7 +53,7 @@ describe('HttpClient via createApiClient', () => {
 
     await expect(
       client.public.createBooking({
-        eventTypeId: 'evt_1',
+        meetingTypeId: 'evt_1',
         startTime: '2026-07-13T13:00:00.000Z',
         invitee: { name: 'Ada', email: 'ada@example.com', timeZone: 'UTC' },
         guests: [],

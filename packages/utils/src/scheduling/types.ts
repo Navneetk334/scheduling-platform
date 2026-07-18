@@ -26,7 +26,7 @@ export interface EngineScheduleConfig {
   readonly overrides: readonly EngineDateOverride[];
 }
 
-export interface EngineEventTypeConfig {
+export interface EngineMeetingTypeConfig {
   readonly durationMinutes: number;
   readonly bufferBeforeMinutes: number;
   readonly bufferAfterMinutes: number;
@@ -43,14 +43,14 @@ export interface GenerateSlotsParams {
   readonly fromDate: string;
   /** Inclusive last calendar date (YYYY-MM-DD), interpreted in schedule zone. */
   readonly toDate: string;
-  readonly eventType: EngineEventTypeConfig;
+  readonly meetingType: EngineMeetingTypeConfig;
   readonly schedule: EngineScheduleConfig;
   /**
    * Hard-blocking busy intervals for the host: existing bookings for *other*
-   * event types, and external calendar events. Buffers are applied by the
+   * meeting types, and external calendar events. Buffers are applied by the
    * engine, so pass raw busy times here.
    *
-   * For GROUP event types, do NOT include this event's own concurrent
+   * For GROUP meeting types, do NOT include this event's own concurrent
    * bookings here — supply them via {@link seatMap} instead.
    */
   readonly busyIntervals?: readonly Interval[];

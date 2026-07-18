@@ -44,7 +44,7 @@ function workingIntervalsForDate(
 }
 
 /**
- * Generate all bookable slots for an event type over a date range.
+ * Generate all bookable slots for an meeting type over a date range.
  *
  * The algorithm is timezone- and DST-correct: working windows are defined in
  * the schedule's zone and converted to absolute instants, while conflict
@@ -52,7 +52,7 @@ function workingIntervalsForDate(
  * deterministic given its inputs (including `now`).
  */
 export function generateAvailableSlots(params: GenerateSlotsParams): GeneratedSlot[] {
-  const { now, fromDate, toDate, eventType, schedule } = params;
+  const { now, fromDate, toDate, meetingType, schedule } = params;
   const busyIntervals = params.busyIntervals ?? [];
   const seatMap = params.seatMap ?? new Map<string, number>();
 
@@ -64,7 +64,7 @@ export function generateAvailableSlots(params: GenerateSlotsParams): GeneratedSl
     bookingWindowDays,
     slotIntervalMinutes,
     seatsPerSlot,
-  } = eventType;
+  } = meetingType;
 
   // Effective earliest bookable instant (minimum notice).
   const earliest = addMinutes(now, minimumNoticeMinutes);

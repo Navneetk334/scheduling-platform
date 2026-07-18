@@ -36,7 +36,7 @@ export class PublicService {
         logoUrl: organization.branding?.logoUrl ?? null,
         timeZone: organization.timeZone,
       },
-      eventType: {
+      meetingType: {
         id: meetingType.id,
         title: meetingType.title,
         slug: meetingType.slug,

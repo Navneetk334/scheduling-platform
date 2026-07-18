@@ -1,5 +1,5 @@
 import type {
-  EngineEventTypeConfig,
+  EngineMeetingTypeConfig,
   EngineScheduleConfig,
 } from '@invincible/utils';
 
@@ -47,7 +47,7 @@ export function toEngineSchedule(availability: AvailabilityRow): EngineScheduleC
   };
 }
 
-export function toEngineEventType(meetingType: MeetingTypeRow): EngineEventTypeConfig {
+export function toEngineMeetingType(meetingType: MeetingTypeRow): EngineMeetingTypeConfig {
   return {
     durationMinutes: meetingType.durationMinutes,
     bufferBeforeMinutes: meetingType.bufferBeforeMinutes,

@@ -10,10 +10,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  createEventTypeSchema,
-  updateEventTypeSchema,
-  type CreateEventTypeInput,
-  type UpdateEventTypeInput,
+  createMeetingTypeSchema,
+  updateMeetingTypeSchema,
+  type CreateMeetingTypeInput,
+  type UpdateMeetingTypeInput,
 } from '@invincible/utils';
 
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
@@ -23,44 +23,44 @@ import { OrgMembershipGuard } from '../../common/guards/org-membership.guard';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import type { SessionContext } from '../../auth/auth.service';
 
-import { EventTypesService } from './event-types.service';
+import { MeetingTypesService } from './meeting-types.service';
 
-@Controller({ path: 'event-types', version: '1' })
+@Controller({ path: 'meeting-types', version: '1' })
 @UseGuards(SessionAuthGuard, OrgMembershipGuard)
-export class EventTypesController {
-  constructor(private readonly eventTypes: EventTypesService) {}
+export class MeetingTypesController {
+  constructor(private readonly meetingTypes: MeetingTypesService) {}
 
   @Get()
   list(@ActiveOrganizationId() organizationId: string) {
-    return this.eventTypes.list(organizationId);
+    return this.meetingTypes.list(organizationId);
   }
 
   @Get(':id')
   get(@ActiveOrganizationId() organizationId: string, @Param('id') id: string) {
-    return this.eventTypes.get(organizationId, id);
+    return this.meetingTypes.get(organizationId, id);
   }
 
   @Post()
   create(
     @ActiveOrganizationId() organizationId: string,
     @CurrentUser() user: SessionContext['user'],
-    @Body(new ZodValidationPipe(createEventTypeSchema)) body: CreateEventTypeInput,
+    @Body(new ZodValidationPipe(createMeetingTypeSchema)) body: CreateMeetingTypeInput,
   ) {
-    return this.eventTypes.create(organizationId, user.id, body);
+    return this.meetingTypes.create(organizationId, user.id, body);
   }
 
   @Patch(':id')
   update(
     @ActiveOrganizationId() organizationId: string,
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(updateEventTypeSchema)) body: UpdateEventTypeInput,
+    @Body(new ZodValidationPipe(updateMeetingTypeSchema)) body: UpdateMeetingTypeInput,
   ) {
-    return this.eventTypes.update(organizationId, id, body);
+    return this.meetingTypes.update(organizationId, id, body);
   }
 
   @Delete(':id')
   @HttpCode(204)
   remove(@ActiveOrganizationId() organizationId: string, @Param('id') id: string) {
-    return this.eventTypes.remove(organizationId, id);
+    return this.meetingTypes.remove(organizationId, id);
   }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { generateAvailableSlots, isSlotBookable } from './availability-engine';
-import type { EngineEventTypeConfig, EngineScheduleConfig } from './types';
+import type { EngineMeetingTypeConfig, EngineScheduleConfig } from './types';
 
 /** Mon–Fri 09:00–17:00 in New York. */
 const nySchedule: EngineScheduleConfig = {
@@ -14,7 +14,7 @@ const nySchedule: EngineScheduleConfig = {
   overrides: [],
 };
 
-const baseEvent: EngineEventTypeConfig = {
+const baseEvent: EngineMeetingTypeConfig = {
   durationMinutes: 30,
   bufferBeforeMinutes: 0,
   bufferAfterMinutes: 0,
@@ -33,7 +33,7 @@ describe('generateAvailableSlots — basics', () => {
       now: new Date('2026-07-10T00:00:00.000Z'),
       fromDate: '2026-07-13',
       toDate: '2026-07-13',
-      eventType: baseEvent,
+      meetingType: baseEvent,
       schedule: nySchedule,
     });
 
@@ -50,7 +50,7 @@ describe('generateAvailableSlots — basics', () => {
       now: new Date('2026-01-01T00:00:00.000Z'),
       fromDate: '2026-01-05',
       toDate: '2026-01-05',
-      eventType: baseEvent,
+      meetingType: baseEvent,
       schedule: nySchedule,
     });
     expect(iso(slots[0]!.start)).toBe('2026-01-05T14:00:00.000Z');
@@ -62,7 +62,7 @@ describe('generateAvailableSlots — basics', () => {
       now: new Date('2026-07-10T00:00:00.000Z'),
       fromDate: '2026-07-18', // Saturday
       toDate: '2026-07-18',
-      eventType: baseEvent,
+      meetingType: baseEvent,
       schedule: nySchedule,
     });
     expect(slots).toHaveLength(0);
@@ -73,7 +73,7 @@ describe('generateAvailableSlots — basics', () => {
       now: new Date('2026-07-10T00:00:00.000Z'),
       fromDate: '2026-07-13', // Mon
       toDate: '2026-07-15', // Wed
-      eventType: baseEvent,
+      meetingType: baseEvent,
       schedule: nySchedule,
     });
     const days = new Set(slots.map((s) => s.start.toISOString().slice(0, 10)));
@@ -88,7 +88,7 @@ describe('generateAvailableSlots — constraints', () => {
       now: new Date('2026-07-13T14:00:00.000Z'),
       fromDate: '2026-07-13',
       toDate: '2026-07-13',
-      eventType: { ...baseEvent, minimumNoticeMinutes: 120 },
+      meetingType: { ...baseEvent, minimumNoticeMinutes: 120 },
       schedule: nySchedule,
     });
     // Earliest bookable is 16:00 UTC.
@@ -100,7 +100,7 @@ describe('generateAvailableSlots — constraints', () => {
       now: new Date('2026-07-10T00:00:00.000Z'),
       fromDate: '2026-07-10',
       toDate: '2027-01-01',
-      eventType: { ...baseEvent, bookingWindowDays: 3 },
+      meetingType: { ...baseEvent, bookingWindowDays: 3 },
       schedule: nySchedule,
     });
     const windowEnd = new Date('2026-07-13T00:00:00.000Z').getTime();
@@ -113,7 +113,7 @@ describe('generateAvailableSlots — constraints', () => {
       now: new Date('2026-07-10T00:00:00.000Z'),
       fromDate: '2026-07-13',
       toDate: '2026-07-13',
-      eventType: { ...baseEvent, bufferBeforeMinutes: 15, bufferAfterMinutes: 15 },
+      meetingType: { ...baseEvent, bufferBeforeMinutes: 15, bufferAfterMinutes: 15 },
       schedule: nySchedule,
       busyIntervals: [
         { start: new Date('2026-07-13T15:00:00.000Z'), end: new Date('2026-07-13T15:30:00.000Z') },
@@ -135,7 +135,7 @@ describe('generateAvailableSlots — overrides & seats', () => {
       now: new Date('2026-07-10T00:00:00.000Z'),
       fromDate: '2026-07-13',
       toDate: '2026-07-13',
-      eventType: baseEvent,
+      meetingType: baseEvent,
       schedule: { ...nySchedule, overrides: [{ date: '2026-07-13', intervals: [] }] },
     });
     expect(slots).toHaveLength(0);
@@ -146,7 +146,7 @@ describe('generateAvailableSlots — overrides & seats', () => {
       now: new Date('2026-07-10T00:00:00.000Z'),
       fromDate: '2026-07-13',
       toDate: '2026-07-13',
-      eventType: baseEvent,
+      meetingType: baseEvent,
       schedule: {
         ...nySchedule,
         overrides: [
@@ -162,7 +162,7 @@ describe('generateAvailableSlots — overrides & seats', () => {
     ]);
   });
 
-  it('honors seat maps for GROUP event types', () => {
+  it('honors seat maps for GROUP meeting types', () => {
     const seatMap = new Map<string, number>([
       ['2026-07-13T13:00:00.000Z', 2],
       ['2026-07-13T13:15:00.000Z', 3],
@@ -171,7 +171,7 @@ describe('generateAvailableSlots — overrides & seats', () => {
       now: new Date('2026-07-10T00:00:00.000Z'),
       fromDate: '2026-07-13',
       toDate: '2026-07-13',
-      eventType: { ...baseEvent, seatsPerSlot: 3 },
+      meetingType: { ...baseEvent, seatsPerSlot: 3 },
       schedule: nySchedule,
       seatMap,
     });
@@ -185,7 +185,7 @@ describe('generateAvailableSlots — overrides & seats', () => {
 describe('isSlotBookable', () => {
   const commonParams = {
     now: new Date('2026-07-10T00:00:00.000Z'),
-    eventType: baseEvent,
+    meetingType: baseEvent,
     schedule: nySchedule,
   };
 

@@ -7,15 +7,15 @@ import type { CreateBookingInput } from '@invincible/utils';
 import { getApiClient } from '@/lib/api';
 
 export function useAvailability(params: {
-  eventTypeId: string;
+  meetingTypeId: string;
   from: string;
   to: string;
   timeZone: string;
 }) {
   return useQuery<AvailableSlot[]>({
-    queryKey: ['availability', params.eventTypeId, params.from, params.to, params.timeZone],
+    queryKey: ['availability', params.meetingTypeId, params.from, params.to, params.timeZone],
     queryFn: () =>
-      getApiClient().public.getAvailability(params.eventTypeId, {
+      getApiClient().public.getAvailability(params.meetingTypeId, {
         from: params.from,
         to: params.to,
         timeZone: params.timeZone,

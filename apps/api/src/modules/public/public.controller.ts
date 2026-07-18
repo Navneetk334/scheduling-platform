@@ -29,13 +29,13 @@ export class PublicController {
     return this.publicService.getBookingPage(orgSlug, eventSlug);
   }
 
-  @Get('event-types/:eventTypeId/availability')
+  @Get('meeting-types/:meetingTypeId/availability')
   getAvailability(
-    @Param('eventTypeId') eventTypeId: string,
+    @Param('meetingTypeId') meetingTypeId: string,
     @Query() query: Record<string, string>,
   ) {
-    const parsed = availabilityQuerySchema.parse({ ...query, eventTypeId });
-    return this.availability.getSlots(parsed.eventTypeId, parsed.from, parsed.to);
+    const parsed = availabilityQuerySchema.parse({ ...query, meetingTypeId });
+    return this.availability.getSlots(parsed.meetingTypeId, parsed.from, parsed.to);
   }
 
   @Post('bookings')

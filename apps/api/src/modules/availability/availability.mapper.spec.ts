@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { toEngineEventType, toEngineSchedule } from './availability.mapper';
+import { toEngineMeetingType, toEngineSchedule } from './availability.mapper';
 
 describe('availability.mapper', () => {
   it('maps a Prisma availability row to an engine schedule config', () => {
@@ -25,8 +25,8 @@ describe('availability.mapper', () => {
     expect(result.overrides[0]?.intervals).toEqual([]);
   });
 
-  it('maps a Prisma event type row to an engine event type config', () => {
-    const result = toEngineEventType({
+  it('maps a Prisma meeting type row to an engine meeting type config', () => {
+    const result = toEngineMeetingType({
       durationMinutes: 30,
       bufferBeforeMinutes: 5,
       bufferAfterMinutes: 10,

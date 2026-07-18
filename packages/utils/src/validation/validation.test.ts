@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createBookingSchema, availabilityQuerySchema } from './booking';
-import { createEventTypeSchema } from './event-type';
+import { createMeetingTypeSchema } from './meeting-type';
 import { createOrganizationSchema, inviteMemberSchema } from './organization';
 import { calendarDateSchema, emailSchema, slugSchema, timeZoneSchema } from './primitives';
 import { availabilityRuleSchema, createScheduleSchema } from './schedule';
@@ -59,25 +59,25 @@ describe('schedule schemas', () => {
   });
 });
 
-describe('event type schemas', () => {
+describe('meeting type schemas', () => {
   const base = {
     scheduleId: '123e4567-e89b-12d3-a456-426614174000',
     title: 'Intro Call',
     durationMinutes: 30,
     locations: [{ type: 'GOOGLE_MEET' as const, value: null }],
   };
-  it('accepts a valid one-on-one event type with defaults', () => {
-    const parsed = createEventTypeSchema.parse(base);
+  it('accepts a valid one-on-one meeting type with defaults', () => {
+    const parsed = createMeetingTypeSchema.parse(base);
     expect(parsed.slotIntervalMinutes).toBe(15);
     expect(parsed.seatsPerSlot).toBe(1);
     expect(parsed.color).toBe('#4F46E5');
   });
   it('rejects multi-seat non-group events', () => {
-    const result = createEventTypeSchema.safeParse({ ...base, seatsPerSlot: 5 });
+    const result = createMeetingTypeSchema.safeParse({ ...base, seatsPerSlot: 5 });
     expect(result.success).toBe(false);
   });
   it('accepts multi-seat GROUP events', () => {
-    const result = createEventTypeSchema.safeParse({
+    const result = createMeetingTypeSchema.safeParse({
       ...base,
       kind: 'GROUP',
       seatsPerSlot: 5,
@@ -89,7 +89,7 @@ describe('event type schemas', () => {
 describe('booking schemas', () => {
   it('accepts a valid booking payload', () => {
     const result = createBookingSchema.safeParse({
-      eventTypeId: 'evt_1',
+      meetingTypeId: 'evt_1',
       startTime: '2026-07-18T13:00:00.000Z',
       invitee: { name: 'Ada', email: 'ada@example.com', timeZone: 'UTC' },
     });
@@ -97,7 +97,7 @@ describe('booking schemas', () => {
   });
   it('rejects invalid start times', () => {
     const result = createBookingSchema.safeParse({
-      eventTypeId: 'evt_1',
+      meetingTypeId: 'evt_1',
       startTime: 'not-a-date',
       invitee: { name: 'Ada', email: 'ada@example.com', timeZone: 'UTC' },
     });
@@ -105,7 +105,7 @@ describe('booking schemas', () => {
   });
   it('rejects reversed availability ranges', () => {
     const result = availabilityQuerySchema.safeParse({
-      eventTypeId: 'evt_1',
+      meetingTypeId: 'evt_1',
       from: '2026-07-20',
       to: '2026-07-18',
       timeZone: 'UTC',

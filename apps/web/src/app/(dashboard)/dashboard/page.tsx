@@ -12,12 +12,12 @@ import {
 import Link from 'next/link';
 import * as React from 'react';
 
-import { useEventTypes } from '@/hooks/use-event-types';
+import { useMeetingTypes } from '@/hooks/use-meeting-types';
 import { useActiveOrganization } from '@/hooks/use-organizations';
 
 export default function DashboardOverviewPage() {
   const { activeOrganization, isLoading } = useActiveOrganization();
-  const eventTypes = useEventTypes(activeOrganization?.id);
+  const meetingTypes = useMeetingTypes(activeOrganization?.id);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -35,12 +35,12 @@ export default function DashboardOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Active event types</CardDescription>
+            <CardDescription>Active meeting types</CardDescription>
             <CardTitle className="text-3xl">
-              {eventTypes.isLoading ? (
+              {meetingTypes.isLoading ? (
                 <Skeleton className="h-8 w-12" />
               ) : (
-                (eventTypes.data?.length ?? 0)
+                (meetingTypes.data?.length ?? 0)
               )}
             </CardTitle>
           </CardHeader>
@@ -66,11 +66,11 @@ export default function DashboardOverviewPage() {
       <Card>
         <CardHeader>
           <CardTitle>Get started</CardTitle>
-          <CardDescription>Create an event type so people can book time with you.</CardDescription>
+          <CardDescription>Create an meeting type so people can book time with you.</CardDescription>
         </CardHeader>
         <CardContent>
           <Button asChild>
-            <Link href="/dashboard/event-types">Manage event types</Link>
+            <Link href="/dashboard/meeting-types">Manage meeting types</Link>
           </Button>
         </CardContent>
       </Card>

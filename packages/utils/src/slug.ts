@@ -1,5 +1,5 @@
 /**
- * Deterministic, URL-safe slugification used for org handles, event-type
+ * Deterministic, URL-safe slugification used for org handles, meeting-type
  * links, etc. Kept dependency-free and Unicode-aware.
  */
 export function slugify(input: string): string {

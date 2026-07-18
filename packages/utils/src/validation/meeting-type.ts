@@ -7,7 +7,7 @@ export const locationSchema = z.object({
   value: z.string().trim().max(500).nullable().default(null),
 });
 
-export const createEventTypeSchema = z
+export const createMeetingTypeSchema = z
   .object({
     scheduleId: z.string().cuid2().or(z.string().uuid()),
     kind: z.enum(['ONE_ON_ONE', 'GROUP', 'ROUND_ROBIN', 'COLLECTIVE']).default('ONE_ON_ONE'),
@@ -28,11 +28,11 @@ export const createEventTypeSchema = z
       .default('#4F46E5'),
   })
   .refine((v) => v.seatsPerSlot === 1 || v.kind === 'GROUP', {
-    message: 'seatsPerSlot > 1 is only allowed for GROUP event types.',
+    message: 'seatsPerSlot > 1 is only allowed for GROUP meeting types.',
     path: ['seatsPerSlot'],
   });
 
-export const updateEventTypeSchema = z
+export const updateMeetingTypeSchema = z
   .object({
     title: z.string().trim().min(1).max(150).optional(),
     description: z.string().trim().max(5000).nullable().optional(),
@@ -49,5 +49,5 @@ export const updateEventTypeSchema = z
   })
   .strict();
 
-export type CreateEventTypeInput = z.infer<typeof createEventTypeSchema>;
-export type UpdateEventTypeInput = z.infer<typeof updateEventTypeSchema>;
+export type CreateMeetingTypeInput = z.infer<typeof createMeetingTypeSchema>;
+export type UpdateMeetingTypeInput = z.infer<typeof updateMeetingTypeSchema>;

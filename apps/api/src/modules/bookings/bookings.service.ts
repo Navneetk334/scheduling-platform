@@ -34,10 +34,10 @@ export class BookingsService {
     }
 
     const meetingType = await this.prisma.meetingType.findFirst({
-      where: { id: input.eventTypeId, isActive: true, deletedAt: null },
+      where: { id: input.meetingTypeId, isActive: true, deletedAt: null },
       include: { availability: true, locationLinks: { include: { location: true } } },
     });
-    if (!meetingType) throw AppError.notFound('Meeting type', input.eventTypeId);
+    if (!meetingType) throw AppError.notFound('Meeting type', input.meetingTypeId);
 
     const start = fromISO(input.startTime);
     const end = addMinutes(start, meetingType.durationMinutes);

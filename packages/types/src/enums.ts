@@ -18,7 +18,7 @@ export const MembershipStatus = {
 } as const;
 export type MembershipStatus = (typeof MembershipStatus)[keyof typeof MembershipStatus];
 
-export const EventTypeKind = {
+export const MeetingTypeKind = {
   /** A single host meets a single invitee. */
   OneOnOne: 'ONE_ON_ONE',
   /** A single host meets multiple invitees in one slot. */
@@ -28,7 +28,7 @@ export const EventTypeKind = {
   /** Multiple hosts must all attend. */
   Collective: 'COLLECTIVE',
 } as const;
-export type EventTypeKind = (typeof EventTypeKind)[keyof typeof EventTypeKind];
+export type MeetingTypeKind = (typeof MeetingTypeKind)[keyof typeof MeetingTypeKind];
 
 export const LocationType = {
   GoogleMeet: 'GOOGLE_MEET',
@@ -49,12 +49,12 @@ export const BookingStatus = {
 } as const;
 export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
 
-export const AttendeeRole = {
+export const GuestRole = {
   Host: 'HOST',
   Invitee: 'INVITEE',
   Guest: 'GUEST',
 } as const;
-export type AttendeeRole = (typeof AttendeeRole)[keyof typeof AttendeeRole];
+export type GuestRole = (typeof GuestRole)[keyof typeof GuestRole];
 
 export const CalendarProvider = {
   Google: 'GOOGLE',

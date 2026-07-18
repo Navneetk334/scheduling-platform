@@ -19,9 +19,9 @@ export type OrganizationId = Brand<string, 'OrganizationId'>;
 export type UserId = Brand<string, 'UserId'>;
 export type MembershipId = Brand<string, 'MembershipId'>;
 export type ScheduleId = Brand<string, 'ScheduleId'>;
-export type EventTypeId = Brand<string, 'EventTypeId'>;
+export type MeetingTypeId = Brand<string, 'MeetingTypeId'>;
 export type BookingId = Brand<string, 'BookingId'>;
-export type AttendeeId = Brand<string, 'AttendeeId'>;
+export type GuestId = Brand<string, 'GuestId'>;
 
 /** A half-open time interval [start, end). */
 export interface TimeInterval {
