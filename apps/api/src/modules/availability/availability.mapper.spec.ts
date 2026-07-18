@@ -3,15 +3,26 @@ import { describe, expect, it } from 'vitest';
 import { toEngineEventType, toEngineSchedule } from './availability.mapper';
 
 describe('availability.mapper', () => {
-  it('maps a Prisma schedule row to an engine schedule config', () => {
+  it('maps a Prisma availability row to an engine schedule config', () => {
     const result = toEngineSchedule({
       timeZone: 'America/New_York',
-      rules: [{ weekday: 1, startMinute: 540, endMinute: 1020 }],
-      overrides: [{ date: '2026-07-13', intervals: [{ startMinute: 600, endMinute: 660 }] }],
+      workingHours: [{ weekday: 1, startMinute: 540, endMinute: 1020 }],
+      overrides: [
+        { date: '2026-07-13', isUnavailable: false, intervals: [{ startMinute: 600, endMinute: 660 }] },
+      ],
     });
     expect(result.timeZone).toBe('America/New_York');
     expect(result.rules).toEqual([{ weekday: 1, startMinute: 540, endMinute: 1020 }]);
     expect(result.overrides[0]?.intervals).toEqual([{ startMinute: 600, endMinute: 660 }]);
+  });
+
+  it('treats an unavailable override as a blocked day (empty intervals)', () => {
+    const result = toEngineSchedule({
+      timeZone: 'UTC',
+      workingHours: [],
+      overrides: [{ date: '2026-07-13', isUnavailable: true, intervals: [] }],
+    });
+    expect(result.overrides[0]?.intervals).toEqual([]);
   });
 
   it('maps a Prisma event type row to an engine event type config', () => {

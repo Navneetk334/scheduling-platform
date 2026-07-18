@@ -1,7 +1,14 @@
 // ============================================================================
 // INVINCIBLE PROS — Scheduling Platform data model
-// PostgreSQL + Prisma. Multi-tenant (organization-scoped) with Better Auth
-// compatible identity tables.
+// ----------------------------------------------------------------------------
+// A fully-normalized, multi-tenant PostgreSQL schema (Prisma).
+//
+// Multi-tenancy: every tenant-scoped table carries `organizationId` (row-level
+// tenancy in a shared database). Global tables (User, Plan, Permission,
+// FeatureFlag) are intentionally NOT org-scoped.
+//
+// Money is stored as integer minor units (e.g. cents) + an ISO currency code.
+// Identity tables (User/Session/Account/Verification) are Better Auth compatible.
 // ============================================================================
 
 generator client {
@@ -13,15 +20,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ---------------------------------------------------------------------------
+// ===========================================================================
 // Enums
-// ---------------------------------------------------------------------------
-
-enum OrganizationRole {
-  OWNER
-  ADMIN
-  MEMBER
-}
+// ===========================================================================
 
 enum MembershipStatus {
   ACTIVE
@@ -36,20 +37,44 @@ enum InvitationStatus {
   EXPIRED
 }
 
-enum EventTypeKind {
+enum PermissionEffect {
+  ALLOW
+  DENY
+}
+
+enum MeetingTypeKind {
   ONE_ON_ONE
   GROUP
   ROUND_ROBIN
   COLLECTIVE
 }
 
-enum LocationType {
+enum HostAssignmentStrategy {
+  ROUND_ROBIN_FAIR
+  ROUND_ROBIN_WEIGHTED
+  PRIORITY
+  ALL_REQUIRED // collective
+}
+
+enum MeetingHostRole {
+  ORGANIZER
+  CO_HOST
+  MEMBER
+}
+
+enum LocationKind {
   GOOGLE_MEET
   ZOOM
   MICROSOFT_TEAMS
   IN_PERSON
   PHONE
   CUSTOM
+  ROOM
+}
+
+enum MeetingRoomKind {
+  PHYSICAL
+  VIRTUAL
 }
 
 enum BookingStatus {
@@ -57,13 +82,21 @@ enum BookingStatus {
   CONFIRMED
   CANCELLED
   RESCHEDULED
+  COMPLETED
   NO_SHOW
 }
 
-enum AttendeeRole {
-  HOST
+enum GuestRole {
   INVITEE
   GUEST
+}
+
+enum WaitlistStatus {
+  WAITING
+  INVITED
+  CONVERTED
+  EXPIRED
+  CANCELLED
 }
 
 enum CalendarProvider {
@@ -72,9 +105,129 @@ enum CalendarProvider {
   APPLE
 }
 
-// ---------------------------------------------------------------------------
-// Identity (Better Auth compatible)
-// ---------------------------------------------------------------------------
+enum QuestionType {
+  SHORT_TEXT
+  LONG_TEXT
+  SINGLE_SELECT
+  MULTI_SELECT
+  CHECKBOX
+  NUMBER
+  EMAIL
+  PHONE
+  DATE
+  FILE
+}
+
+enum BillingInterval {
+  MONTH
+  YEAR
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  INCOMPLETE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentProvider {
+  STRIPE
+}
+
+enum CouponType {
+  PERCENT
+  FIXED
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  WEBHOOK
+  PUSH
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
+enum IntegrationType {
+  ZAPIER
+  SLACK
+  DISCORD
+  HUBSPOT
+  SALESFORCE
+  PIPEDRIVE
+  ZOOM
+  GOOGLE
+  MICROSOFT
+  WEBHOOK
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum WebhookStatus {
+  ACTIVE
+  PAUSED
+  DISABLED
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum DomainStatus {
+  PENDING
+  VERIFYING
+  VERIFIED
+  ACTIVE
+  FAILED
+}
+
+enum SslStatus {
+  NONE
+  PENDING
+  ISSUED
+  FAILED
+}
+
+enum AuditActorType {
+  USER
+  SYSTEM
+  API_KEY
+}
+
+// ===========================================================================
+// Identity (global, Better Auth compatible)
+// ===========================================================================
 
 model User {
   id            String   @id @default(cuid())
@@ -82,17 +235,34 @@ model User {
   emailVerified Boolean  @default(false)
   name          String
   image         String?
+  phone         String?
   timeZone      String   @default("UTC")
+  locale        String   @default("en")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  sessions            Session[]
-  accounts            Account[]
-  memberships         Membership[]
-  schedules           Schedule[]
-  eventTypes          EventType[]
+  // Auth
+  sessions Session[]
+  accounts Account[]
+
+  // Tenancy
+  memberships     Membership[]
+  teamMemberships TeamMembership[]
+  sentInvitations Invitation[]     @relation("InvitedBy")
+
+  // Scheduling
+  availabilities      Availability[]
+  ownedMeetingTypes   MeetingType[]        @relation("MeetingTypeOwner")
+  meetingTypeHosts    MeetingTypeHost[]
+  assignedBookings    Booking[]            @relation("BookingAssignedHost")
+  bookingHosts        BookingHost[]
   calendarConnections CalendarConnection[]
-  sentInvitations     Invitation[]         @relation("InvitedBy")
+
+  // Platform
+  apiKeys           ApiKey[]
+  auditLogs         AuditLog[]
+  couponRedemptions CouponRedemption[]
+  guestProfiles     Guest[]
 
   @@map("users")
 }
@@ -114,6 +284,7 @@ model Session {
   @@map("sessions")
 }
 
+/// OAuth + credential accounts (Better Auth). Covers social OAuth logins.
 model Account {
   id                    String    @id @default(cuid())
   userId                String
@@ -148,51 +319,166 @@ model Verification {
   @@map("verifications")
 }
 
-// ---------------------------------------------------------------------------
-// Tenancy
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// Tenancy, Teams & RBAC
+// ===========================================================================
 
 model Organization {
   id        String    @id @default(cuid())
   name      String
   slug      String    @unique
-  logoUrl   String?
   timeZone  String    @default("UTC")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
+  // Tenancy graph
   memberships Membership[]
+  teams       Team[]
+  roles       Role[]
   invitations Invitation[]
-  schedules   Schedule[]
-  eventTypes  EventType[]
-  bookings    Booking[]
 
+  // Scheduling
+  availabilities      Availability[]
+  meetingTypes        MeetingType[]
+  bookings            Booking[]
+  locations           Location[]
+  meetingRooms        MeetingRoom[]
+  forms               Form[]
+  waitlistItems       WaitlistEntry[]
+  calendarConnections CalendarConnection[]
+
+  // Platform
+  integrations    Integration[]
+  apiKeys         ApiKey[]
+  webhooks        Webhook[]
+  notificationLog NotificationLog[]
+  auditLogs       AuditLog[]
+  analyticsEvents AnalyticsEvent[]
+  featureFlags    OrganizationFeatureFlag[]
+
+  // Billing
+  subscription      Subscription?
+  invoices          Invoice[]
+  payments          Payment[]
+  coupons           Coupon[]
+  couponRedemptions CouponRedemption[]
+
+  // Branding & distribution
+  branding Branding?
+  domains  Domain[]
+
+  @@index([deletedAt])
   @@map("organizations")
+}
+
+model Team {
+  id             String   @id @default(cuid())
+  organizationId String
+  parentTeamId   String?
+  name           String
+  slug           String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parentTeam   Team?            @relation("TeamHierarchy", fields: [parentTeamId], references: [id])
+  childTeams   Team[]           @relation("TeamHierarchy")
+  members      TeamMembership[]
+  meetingTypes MeetingType[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@index([parentTeamId])
+  @@map("teams")
+}
+
+model Role {
+  id             String   @id @default(cuid())
+  organizationId String
+  key            String // e.g. "owner", "admin", "member", or custom
+  name           String
+  description    String?
+  isSystem       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions  RolePermission[]
+  memberships  Membership[]
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("roles")
+}
+
+/// Global catalog of permission keys (e.g. "booking.read", "member.invite").
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  description String?
+  category    String?
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String           @id @default(cuid())
+  roleId       String
+  permissionId String
+  effect       PermissionEffect @default(ALLOW)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
 }
 
 model Membership {
   id             String           @id @default(cuid())
   organizationId String
   userId         String
-  role           OrganizationRole @default(MEMBER)
+  roleId         String
   status         MembershipStatus @default(ACTIVE)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id])
 
   @@unique([organizationId, userId])
   @@index([userId])
+  @@index([roleId])
   @@map("memberships")
+}
+
+model TeamMembership {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  isLead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@map("team_memberships")
 }
 
 model Invitation {
   id             String           @id @default(cuid())
   organizationId String
   email          String
-  role           OrganizationRole @default(MEMBER)
+  roleId         String?
   token          String           @unique
   status         InvitationStatus @default(PENDING)
   expiresAt      DateTime
@@ -208,11 +494,11 @@ model Invitation {
   @@map("invitations")
 }
 
-// ---------------------------------------------------------------------------
-// Availability
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// Availability & Working Hours
+// ===========================================================================
 
-model Schedule {
+model Availability {
   id             String   @id @default(cuid())
   organizationId String
   ownerId        String
@@ -222,174 +508,759 @@ model Schedule {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner        User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  rules        AvailabilityRule[]
-  overrides    DateOverride[]
-  eventTypes   EventType[]
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  workingHours WorkingHours[]
+  overrides    AvailabilityOverride[]
+  meetingTypes MeetingType[]
 
   @@index([organizationId])
   @@index([ownerId])
-  @@map("schedules")
+  @@map("availabilities")
 }
 
-model AvailabilityRule {
-  id          String @id @default(cuid())
-  scheduleId  String
-  weekday     Int // 0=Sunday .. 6=Saturday
-  startMinute Int // minutes since midnight (schedule timezone)
-  endMinute   Int
+/// Weekly recurring bookable windows for an availability profile.
+model WorkingHours {
+  id             String @id @default(cuid())
+  availabilityId String
+  weekday        Int // 0=Sunday .. 6=Saturday
+  startMinute    Int // minutes since midnight (profile timezone)
+  endMinute      Int
 
-  schedule Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  availability Availability @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
 
-  @@index([scheduleId])
-  @@map("availability_rules")
+  @@index([availabilityId])
+  @@map("working_hours")
 }
 
-model DateOverride {
-  id         String @id @default(cuid())
-  scheduleId String
-  date       String // YYYY-MM-DD (schedule timezone)
+/// Date-specific override; empty intervals => that date is unavailable.
+model AvailabilityOverride {
+  id             String  @id @default(cuid())
+  availabilityId String
+  date           String // YYYY-MM-DD (profile timezone)
+  isUnavailable  Boolean @default(false)
 
-  schedule  Schedule           @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  intervals OverrideInterval[]
+  availability Availability                   @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
+  intervals    AvailabilityOverrideInterval[]
 
-  @@unique([scheduleId, date])
-  @@map("date_overrides")
+  @@unique([availabilityId, date])
+  @@map("availability_overrides")
 }
 
-model OverrideInterval {
+model AvailabilityOverrideInterval {
   id          String @id @default(cuid())
   overrideId  String
   startMinute Int
   endMinute   Int
 
-  override DateOverride @relation(fields: [overrideId], references: [id], onDelete: Cascade)
+  override AvailabilityOverride @relation(fields: [overrideId], references: [id], onDelete: Cascade)
 
   @@index([overrideId])
-  @@map("override_intervals")
+  @@map("availability_override_intervals")
 }
 
-// ---------------------------------------------------------------------------
-// Event types
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// Locations & Meeting Rooms
+// ===========================================================================
 
-model EventType {
-  id                   String        @id @default(cuid())
+model Location {
+  id             String       @id @default(cuid())
+  organizationId String
+  kind           LocationKind
+  label          String
+  value          String? // URL / address / phone depending on kind
+  meetingRoomId  String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  meetingRoom      MeetingRoom?          @relation(fields: [meetingRoomId], references: [id])
+  meetingTypeLinks MeetingTypeLocation[]
+  bookings         Booking[]
+
+  @@index([organizationId])
+  @@map("locations")
+}
+
+model MeetingRoom {
+  id             String          @id @default(cuid())
+  organizationId String
+  name           String
+  kind           MeetingRoomKind @default(PHYSICAL)
+  capacity       Int             @default(1)
+  timeZone       String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  locations    Location[]
+  bookings     Booking[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("meeting_rooms")
+}
+
+// ===========================================================================
+// Meeting Types (event types)
+// ===========================================================================
+
+model MeetingType {
+  id                   String                 @id @default(cuid())
   organizationId       String
   ownerId              String
-  scheduleId           String
-  kind                 EventTypeKind @default(ONE_ON_ONE)
+  teamId               String?
+  availabilityId       String
+  formId               String?
+  kind                 MeetingTypeKind        @default(ONE_ON_ONE)
+  assignmentStrategy   HostAssignmentStrategy @default(ROUND_ROBIN_FAIR)
   title                String
   slug                 String
   description          String?
   durationMinutes      Int
-  bufferBeforeMinutes  Int           @default(0)
-  bufferAfterMinutes   Int           @default(0)
-  minimumNoticeMinutes Int           @default(60)
-  bookingWindowDays    Int           @default(60)
-  slotIntervalMinutes  Int           @default(15)
-  seatsPerSlot         Int           @default(1)
-  isActive             Boolean       @default(true)
-  color                String        @default("#4F46E5")
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  bufferBeforeMinutes  Int                    @default(0)
+  bufferAfterMinutes   Int                    @default(0)
+  minimumNoticeMinutes Int                    @default(60)
+  bookingWindowDays    Int                    @default(60)
+  slotIntervalMinutes  Int                    @default(15)
+  seatsPerSlot         Int                    @default(1)
+  maxPerDay            Int?
+  maxPerWeek           Int?
+  isActive             Boolean                @default(true)
+  isPrivate            Boolean                @default(false)
+  color                String                 @default("#4F46E5")
+  priceAmount          Int? // minor units; null = free
+  priceCurrency        String?
+  recurrenceRule       String? // RRULE for recurring meetings
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
   deletedAt            DateTime?
 
-  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner        User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  schedule     Schedule            @relation(fields: [scheduleId], references: [id])
-  locations    EventTypeLocation[]
-  bookings     Booking[]
+  organization  Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner         User                  @relation("MeetingTypeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  team          Team?                 @relation(fields: [teamId], references: [id])
+  availability  Availability          @relation(fields: [availabilityId], references: [id])
+  form          Form?                 @relation(fields: [formId], references: [id])
+  hosts         MeetingTypeHost[]
+  locationLinks MeetingTypeLocation[]
+  bookings      Booking[]
+  waitlist      WaitlistEntry[]
 
   @@unique([organizationId, slug])
   @@index([ownerId])
-  @@index([scheduleId])
-  @@map("event_types")
+  @@index([teamId])
+  @@index([availabilityId])
+  @@map("meeting_types")
 }
 
-model EventTypeLocation {
-  id          String       @id @default(cuid())
-  eventTypeId String
-  type        LocationType
-  value       String?
+/// Host pool for round-robin / collective meeting types.
+model MeetingTypeHost {
+  id            String          @id @default(cuid())
+  meetingTypeId String
+  userId        String
+  role          MeetingHostRole @default(MEMBER)
+  priority      Int             @default(0)
+  weight        Int             @default(1)
 
-  eventType EventType @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+  meetingType MeetingType @relation(fields: [meetingTypeId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([eventTypeId])
-  @@map("event_type_locations")
+  @@unique([meetingTypeId, userId])
+  @@index([userId])
+  @@map("meeting_type_hosts")
 }
 
-// ---------------------------------------------------------------------------
-// Bookings
-// ---------------------------------------------------------------------------
+model MeetingTypeLocation {
+  id            String @id @default(cuid())
+  meetingTypeId String
+  locationId    String
+  position      Int    @default(0)
+
+  meetingType MeetingType @relation(fields: [meetingTypeId], references: [id], onDelete: Cascade)
+  location    Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingTypeId, locationId])
+  @@index([locationId])
+  @@map("meeting_type_locations")
+}
+
+// ===========================================================================
+// Forms, Questions & Responses
+// ===========================================================================
+
+model Form {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  questions    Question[]
+  meetingTypes MeetingType[]
+  responses    FormResponse[]
+
+  @@index([organizationId])
+  @@map("forms")
+}
+
+model Question {
+  id       String       @id @default(cuid())
+  formId   String
+  type     QuestionType
+  label    String
+  key      String
+  helpText String?
+  required Boolean      @default(false)
+  position Int          @default(0)
+  options  Json? // for select/multi-select
+  config   Json?
+
+  form    Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  answers Answer[]
+
+  @@unique([formId, key])
+  @@index([formId])
+  @@map("questions")
+}
+
+model FormResponse {
+  id             String   @id @default(cuid())
+  organizationId String
+  formId         String
+  bookingId      String?  @unique
+  createdAt      DateTime @default(now())
+
+  form    Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  answers Answer[]
+
+  @@index([formId])
+  @@map("form_responses")
+}
+
+model Answer {
+  id         String @id @default(cuid())
+  responseId String
+  questionId String
+  value      Json // string | string[] | number | boolean | file ref
+
+  response FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  question Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([responseId, questionId])
+  @@index([questionId])
+  @@map("answers")
+}
+
+// ===========================================================================
+// Bookings, Guests & Waitlists
+// ===========================================================================
 
 model Booking {
   id                String        @id @default(cuid())
   organizationId    String
-  eventTypeId       String
+  meetingTypeId     String
+  assignedHostId    String?
+  locationId        String?
+  meetingRoomId     String?
   status            BookingStatus @default(CONFIRMED)
   startTime         DateTime
   endTime           DateTime
   timeZone          String
-  location          Json?
   meetingUrl        String?
   notes             String?
   cancelReason      String?
+  cancelledAt       DateTime?
+  priceAmount       Int?
+  priceCurrency     String?
   reference         String        @unique
   idempotencyKey    String?       @unique
   rescheduledFromId String?       @unique
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  eventType       EventType    @relation(fields: [eventTypeId], references: [id])
-  attendees       Attendee[]
-  rescheduledFrom Booking?     @relation("Reschedule", fields: [rescheduledFromId], references: [id])
-  rescheduledTo   Booking?     @relation("Reschedule")
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  meetingType      MeetingType       @relation(fields: [meetingTypeId], references: [id])
+  assignedHost     User?             @relation("BookingAssignedHost", fields: [assignedHostId], references: [id])
+  location         Location?         @relation(fields: [locationId], references: [id])
+  meetingRoom      MeetingRoom?      @relation(fields: [meetingRoomId], references: [id])
+  guests           Guest[]
+  hosts            BookingHost[]
+  formResponse     FormResponse?
+  payment          Payment?
+  couponRedemption CouponRedemption?
+  rescheduledFrom  Booking?          @relation("Reschedule", fields: [rescheduledFromId], references: [id])
+  rescheduledTo    Booking?          @relation("Reschedule")
 
   @@index([organizationId, startTime])
-  @@index([eventTypeId, startTime, status])
+  @@index([meetingTypeId, startTime, status])
+  @@index([assignedHostId, startTime])
   @@map("bookings")
 }
 
-model Attendee {
-  id        String       @id @default(cuid())
+model Guest {
+  id        String    @id @default(cuid())
   bookingId String
-  role      AttendeeRole @default(INVITEE)
+  userId    String?
+  role      GuestRole @default(INVITEE)
   name      String
   email     String
-  timeZone  String       @default("UTC")
-  userId    String?
+  phone     String?
+  timeZone  String    @default("UTC")
+  isPrimary Boolean   @default(false)
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id])
 
   @@index([bookingId])
   @@index([email])
-  @@map("attendees")
+  @@map("guests")
 }
 
-// ---------------------------------------------------------------------------
-// Calendar integrations
-// ---------------------------------------------------------------------------
+/// Internal hosts attending a booking (collective / round-robin record).
+model BookingHost {
+  id        String          @id @default(cuid())
+  bookingId String
+  userId    String
+  role      MeetingHostRole @default(ORGANIZER)
 
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([bookingId, userId])
+  @@index([userId])
+  @@map("booking_hosts")
+}
+
+model WaitlistEntry {
+  id             String         @id @default(cuid())
+  organizationId String
+  meetingTypeId  String
+  name           String
+  email          String
+  phone          String?
+  timeZone       String         @default("UTC")
+  requestedStart DateTime?
+  status         WaitlistStatus @default(WAITING)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  meetingType  MeetingType  @relation(fields: [meetingTypeId], references: [id], onDelete: Cascade)
+
+  @@index([meetingTypeId, status])
+  @@index([email])
+  @@map("waitlist_entries")
+}
+
+// ===========================================================================
+// Calendars & Connections
+// ===========================================================================
+
+/// A user's OAuth connection to an external calendar provider, scoped to an org.
 model CalendarConnection {
-  id           String           @id @default(cuid())
-  userId       String
-  provider     CalendarProvider
-  email        String
-  externalId   String
-  isPrimary    Boolean          @default(false)
-  syncEnabled  Boolean          @default(true)
-  accessToken  String?
-  refreshToken String?
-  expiresAt    DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  provider       CalendarProvider
+  email          String
+  externalId     String
+  accessToken    String?
+  refreshToken   String?
+  expiresAt      DateTime?
+  syncEnabled    Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calendars    Calendar[]
 
   @@unique([userId, provider, externalId])
   @@index([userId])
+  @@index([organizationId])
   @@map("calendar_connections")
+}
+
+/// Individual calendars within a connection (e.g. "Work", "Personal").
+model Calendar {
+  id                String  @id @default(cuid())
+  connectionId      String
+  externalId        String
+  name              String
+  color             String?
+  isPrimary         Boolean @default(false)
+  checkForConflicts Boolean @default(true)
+  writeBookings     Boolean @default(false)
+
+  connection CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, externalId])
+  @@index([connectionId])
+  @@map("calendars")
+}
+
+// ===========================================================================
+// Integrations, API Keys & Webhooks
+// ===========================================================================
+
+model Integration {
+  id                String            @id @default(cuid())
+  organizationId    String
+  type              IntegrationType
+  status            IntegrationStatus @default(CONNECTED)
+  externalAccountId String?
+  config            Json?
+  credentials       Json? // encrypted at the application layer
+  createdById       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, type, externalAccountId])
+  @@index([organizationId])
+  @@map("integrations")
+}
+
+model ApiKey {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  prefix         String
+  hashedKey      String    @unique
+  scopes         String[]
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation(fields: [createdById], references: [id])
+
+  @@index([organizationId])
+  @@map("api_keys")
+}
+
+model Webhook {
+  id             String        @id @default(cuid())
+  organizationId String
+  url            String
+  secret         String
+  events         String[]
+  status         WebhookStatus @default(ACTIVE)
+  createdById    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries   WebhookDelivery[]
+
+  @@index([organizationId])
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id             String                @id @default(cuid())
+  webhookId      String
+  eventType      String
+  payload        Json
+  status         WebhookDeliveryStatus @default(PENDING)
+  responseStatus Int?
+  attempts       Int                   @default(0)
+  error          String?
+  lastAttemptAt  DateTime?
+  createdAt      DateTime              @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, status])
+  @@map("webhook_deliveries")
+}
+
+// ===========================================================================
+// Notifications & Audit
+// ===========================================================================
+
+model NotificationLog {
+  id                String              @id @default(cuid())
+  organizationId    String
+  channel           NotificationChannel
+  template          String
+  recipient         String
+  subject           String?
+  bookingId         String?
+  status            NotificationStatus  @default(QUEUED)
+  providerMessageId String?
+  error             String?
+  scheduledFor      DateTime?
+  sentAt            DateTime?
+  createdAt         DateTime            @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([bookingId])
+  @@map("notification_logs")
+}
+
+model AuditLog {
+  id             String         @id @default(cuid())
+  organizationId String
+  actorType      AuditActorType @default(USER)
+  actorId        String?
+  action         String // e.g. "booking.cancelled"
+  entityType     String
+  entityId       String?
+  metadata       Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime       @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor        User?        @relation(fields: [actorId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+model AnalyticsEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  userId         String?
+  bookingId      String?
+  meetingTypeId  String?
+  properties     Json?
+  occurredAt     DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, name, occurredAt])
+  @@map("analytics_events")
+}
+
+// ===========================================================================
+// Billing: Plans, Subscriptions, Invoices, Payments, Coupons
+// ===========================================================================
+
+/// Global catalog of SaaS plans.
+model Plan {
+  id            String          @id @default(cuid())
+  key           String          @unique
+  name          String
+  description   String?
+  priceAmount   Int             @default(0)
+  currency      String          @default("usd")
+  interval      BillingInterval @default(MONTH)
+  stripePriceId String?
+  features      Json?
+  isPublic      Boolean         @default(true)
+  sortOrder     Int             @default(0)
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  organizationId       String             @unique
+  planId               String
+  status               SubscriptionStatus @default(TRIALING)
+  seats                Int                @default(1)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?            @unique
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  trialEndsAt          DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  canceledAt           DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan         Plan         @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  organizationId  String
+  number          String        @unique
+  status          InvoiceStatus @default(DRAFT)
+  currency        String        @default("usd")
+  subtotal        Int           @default(0)
+  discountTotal   Int           @default(0)
+  taxTotal        Int           @default(0)
+  total           Int           @default(0)
+  amountPaid      Int           @default(0)
+  amountDue       Int           @default(0)
+  dueDate         DateTime?
+  issuedAt        DateTime?
+  paidAt          DateTime?
+  stripeInvoiceId String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lineItems    InvoiceLineItem[]
+  payments     Payment[]
+
+  @@index([organizationId, status])
+  @@map("invoices")
+}
+
+model InvoiceLineItem {
+  id          String @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Int    @default(1)
+  unitAmount  Int
+  amount      Int
+  metadata    Json?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("invoice_line_items")
+}
+
+model Payment {
+  id                String          @id @default(cuid())
+  organizationId    String
+  bookingId         String?         @unique
+  invoiceId         String?
+  amount            Int
+  currency          String          @default("usd")
+  status            PaymentStatus   @default(PENDING)
+  provider          PaymentProvider @default(STRIPE)
+  providerPaymentId String?
+  method            String?
+  refundedAmount    Int             @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  booking      Booking?     @relation(fields: [bookingId], references: [id])
+  invoice      Invoice?     @relation(fields: [invoiceId], references: [id])
+
+  @@index([organizationId, status])
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+model Coupon {
+  id             String     @id @default(cuid())
+  organizationId String
+  code           String
+  type           CouponType @default(PERCENT)
+  amountOff      Int // percent (0-100) or fixed minor units depending on type
+  currency       String?
+  maxRedemptions Int?
+  timesRedeemed  Int        @default(0)
+  expiresAt      DateTime?
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  redemptions  CouponRedemption[]
+
+  @@unique([organizationId, code])
+  @@map("coupons")
+}
+
+model CouponRedemption {
+  id               String   @id @default(cuid())
+  organizationId   String
+  couponId         String
+  bookingId        String?  @unique
+  userId           String?
+  amountDiscounted Int
+  redeemedAt       DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  coupon       Coupon       @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  booking      Booking?     @relation(fields: [bookingId], references: [id])
+  user         User?        @relation(fields: [userId], references: [id])
+
+  @@index([couponId])
+  @@map("coupon_redemptions")
+}
+
+// ===========================================================================
+// Platform config: Feature Flags, White Label, Domains
+// ===========================================================================
+
+model FeatureFlag {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  name           String
+  description    String?
+  defaultEnabled Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  organizations OrganizationFeatureFlag[]
+
+  @@map("feature_flags")
+}
+
+model OrganizationFeatureFlag {
+  id             String  @id @default(cuid())
+  organizationId String
+  flagId         String
+  enabled        Boolean
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  flag         FeatureFlag  @relation(fields: [flagId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, flagId])
+  @@map("organization_feature_flags")
+}
+
+/// White-label branding (1:1 with organization).
+model Branding {
+  id               String   @id @default(cuid())
+  organizationId   String   @unique
+  logoUrl          String?
+  faviconUrl       String?
+  primaryColor     String   @default("#4F46E5")
+  accentColor      String   @default("#06B6D4")
+  emailFromName    String?
+  emailFromAddress String?
+  supportEmail     String?
+  customCss        String?
+  removeBranding   Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("branding")
+}
+
+model Domain {
+  id                String       @id @default(cuid())
+  organizationId    String
+  hostname          String       @unique
+  isPrimary         Boolean      @default(false)
+  status            DomainStatus @default(PENDING)
+  verificationToken String?
+  sslStatus         SslStatus    @default(NONE)
+  verifiedAt        DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("domains")
 }

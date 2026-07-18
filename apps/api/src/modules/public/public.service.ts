@@ -11,10 +11,11 @@ export class PublicService {
   async getBookingPage(orgSlug: string, eventSlug: string) {
     const organization = await this.prisma.organization.findFirst({
       where: { slug: orgSlug, deletedAt: null },
+      include: { branding: true },
     });
     if (!organization) throw AppError.notFound('Organization', orgSlug);
 
-    const eventType = await this.prisma.eventType.findFirst({
+    const meetingType = await this.prisma.meetingType.findFirst({
       where: {
         organizationId: organization.id,
         slug: eventSlug,
@@ -22,29 +23,32 @@ export class PublicService {
         deletedAt: null,
       },
       include: {
-        locations: true,
+        locationLinks: { include: { location: true }, orderBy: { position: 'asc' } },
         owner: { select: { name: true, image: true, timeZone: true } },
       },
     });
-    if (!eventType) throw AppError.notFound('Event type', eventSlug);
+    if (!meetingType) throw AppError.notFound('Meeting type', eventSlug);
 
     return {
       organization: {
         name: organization.name,
         slug: organization.slug,
-        logoUrl: organization.logoUrl,
+        logoUrl: organization.branding?.logoUrl ?? null,
         timeZone: organization.timeZone,
       },
       eventType: {
-        id: eventType.id,
-        title: eventType.title,
-        slug: eventType.slug,
-        description: eventType.description,
-        durationMinutes: eventType.durationMinutes,
-        kind: eventType.kind,
-        color: eventType.color,
-        locations: eventType.locations.map((l) => ({ type: l.type, value: l.value })),
-        host: eventType.owner,
+        id: meetingType.id,
+        title: meetingType.title,
+        slug: meetingType.slug,
+        description: meetingType.description,
+        durationMinutes: meetingType.durationMinutes,
+        kind: meetingType.kind,
+        color: meetingType.color,
+        locations: meetingType.locationLinks.map((link) => ({
+          type: link.location.kind,
+          value: link.location.value,
+        })),
+        host: meetingType.owner,
       },
     };
   }

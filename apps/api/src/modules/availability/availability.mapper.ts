@@ -4,21 +4,22 @@ import type {
 } from '@invincible/utils';
 
 /** Prisma shapes needed to build engine inputs (structural typing). */
-interface RuleRow {
+interface WorkingHoursRow {
   weekday: number;
   startMinute: number;
   endMinute: number;
 }
 interface OverrideRow {
   date: string;
+  isUnavailable: boolean;
   intervals: { startMinute: number; endMinute: number }[];
 }
-interface ScheduleRow {
+interface AvailabilityRow {
   timeZone: string;
-  rules: RuleRow[];
+  workingHours: WorkingHoursRow[];
   overrides: OverrideRow[];
 }
-interface EventTypeRow {
+interface MeetingTypeRow {
   durationMinutes: number;
   bufferBeforeMinutes: number;
   bufferAfterMinutes: number;
@@ -28,29 +29,32 @@ interface EventTypeRow {
   seatsPerSlot: number;
 }
 
-export function toEngineSchedule(schedule: ScheduleRow): EngineScheduleConfig {
+export function toEngineSchedule(availability: AvailabilityRow): EngineScheduleConfig {
   return {
-    timeZone: schedule.timeZone,
-    rules: schedule.rules.map((r) => ({
+    timeZone: availability.timeZone,
+    rules: availability.workingHours.map((r) => ({
       weekday: r.weekday,
       startMinute: r.startMinute,
       endMinute: r.endMinute,
     })),
-    overrides: schedule.overrides.map((o) => ({
+    overrides: availability.overrides.map((o) => ({
       date: o.date,
-      intervals: o.intervals.map((i) => ({ startMinute: i.startMinute, endMinute: i.endMinute })),
+      // An "unavailable" override blocks the whole day (empty intervals).
+      intervals: o.isUnavailable
+        ? []
+        : o.intervals.map((i) => ({ startMinute: i.startMinute, endMinute: i.endMinute })),
     })),
   };
 }
 
-export function toEngineEventType(eventType: EventTypeRow): EngineEventTypeConfig {
+export function toEngineEventType(meetingType: MeetingTypeRow): EngineEventTypeConfig {
   return {
-    durationMinutes: eventType.durationMinutes,
-    bufferBeforeMinutes: eventType.bufferBeforeMinutes,
-    bufferAfterMinutes: eventType.bufferAfterMinutes,
-    minimumNoticeMinutes: eventType.minimumNoticeMinutes,
-    bookingWindowDays: eventType.bookingWindowDays,
-    slotIntervalMinutes: eventType.slotIntervalMinutes,
-    seatsPerSlot: eventType.seatsPerSlot,
+    durationMinutes: meetingType.durationMinutes,
+    bufferBeforeMinutes: meetingType.bufferBeforeMinutes,
+    bufferAfterMinutes: meetingType.bufferAfterMinutes,
+    minimumNoticeMinutes: meetingType.minimumNoticeMinutes,
+    bookingWindowDays: meetingType.bookingWindowDays,
+    slotIntervalMinutes: meetingType.slotIntervalMinutes,
+    seatsPerSlot: meetingType.seatsPerSlot,
   };
 }
