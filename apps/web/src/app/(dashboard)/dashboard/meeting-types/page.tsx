@@ -12,9 +12,12 @@ import {
   CardTitle,
   Skeleton,
 } from '@invincible/ui';
-import { Clock, ExternalLink } from 'lucide-react';
+import { Clock, ExternalLink, Plus, Ticket } from 'lucide-react';
 import * as React from 'react';
 
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { FadeItem, Stagger } from '@/components/dashboard/motion';
+import { PageHeader } from '@/components/dashboard/page-header';
 import { useMeetingTypes } from '@/hooks/use-meeting-types';
 import { useActiveOrganization } from '@/hooks/use-organizations';
 
@@ -23,27 +26,26 @@ export default function MeetingTypesPage() {
   const { data, isLoading, isError, error } = useMeetingTypes(activeOrganization?.id);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Meeting Types</h1>
-          <p className="text-sm text-muted-foreground">
-            Bookable meeting types people can schedule with you.
-          </p>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="Meeting Types"
+        description="Bookable meeting types people can schedule with you."
+        actions={
+          <Button size="sm">
+            <Plus className="size-4" /> New meeting type
+          </Button>
+        }
+      />
 
       {isError ? (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {(error as Error)?.message ?? 'Failed to load meeting types.'}
-          </AlertDescription>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{(error as Error)?.message ?? 'Failed to load meeting types.'}</AlertDescription>
         </Alert>
       ) : null}
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[0, 1, 2, 3].map((i) => (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map((i) => (
             <Card key={i}>
               <CardHeader>
                 <Skeleton className="h-5 w-40" />
@@ -56,55 +58,44 @@ export default function MeetingTypesPage() {
           ))}
         </div>
       ) : data && data.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {data.map((meetingType) => {
-            return (
-              <Card key={meetingType.id}>
+        <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {data.map((mt) => (
+            <FadeItem key={mt.id}>
+              <Card className="group h-full transition-shadow hover:shadow-md">
                 <CardHeader>
                   <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-base">{meetingType.title}</CardTitle>
-                    <span
-                      className="size-3 shrink-0 rounded-full"
-                      style={{ backgroundColor: meetingType.color }}
-                      aria-hidden
-                    />
+                    <CardTitle className="text-base">{mt.title}</CardTitle>
+                    <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: mt.color }} aria-hidden />
                   </div>
-                  {meetingType.description ? (
-                    <CardDescription className="line-clamp-2">
-                      {meetingType.description}
-                    </CardDescription>
+                  {mt.description ? (
+                    <CardDescription className="line-clamp-2">{mt.description}</CardDescription>
                   ) : null}
                 </CardHeader>
                 <CardContent className="flex items-center justify-between">
                   <Badge variant="secondary" className="gap-1">
-                    <Clock className="size-3" aria-hidden />
-                    {meetingType.durationMinutes} min
+                    <Clock className="size-3" aria-hidden /> {mt.durationMinutes} min
                   </Badge>
                   <Button variant="ghost" size="sm" asChild>
-                    <a href={`/${activeOrganization?.slug}/${meetingType.slug}`} target="_blank" rel="noreferrer">
-                      View page
-                      <ExternalLink className="size-3.5" aria-hidden />
+                    <a href={`/${activeOrganization?.slug}/${mt.slug}`} target="_blank" rel="noreferrer">
+                      View page <ExternalLink className="size-3.5" aria-hidden />
                     </a>
                   </Button>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            </FadeItem>
+          ))}
+        </Stagger>
       ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Clock className="size-6" aria-hidden />
-            </div>
-            <div>
-              <p className="font-medium">No meeting types yet</p>
-              <p className="text-sm text-muted-foreground">
-                Create your first meeting type to start accepting bookings.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Ticket}
+          title="No meeting types yet"
+          description="Create your first meeting type to start accepting bookings."
+          action={
+            <Button>
+              <Plus className="size-4" /> New meeting type
+            </Button>
+          }
+        />
       )}
     </div>
   );

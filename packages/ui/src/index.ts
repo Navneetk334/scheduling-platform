@@ -23,3 +23,29 @@ export { Avatar, AvatarImage, AvatarFallback } from './components/avatar';
 export { Spinner, type SpinnerProps } from './components/spinner';
 export { Skeleton } from './components/skeleton';
 export { Logo, type LogoProps } from './components/logo';
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/tabs';
+export { Switch } from './components/switch';
+export { Separator } from './components/separator';
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from './components/table';
+export {
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipContent,
+} from './components/tooltip';
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuGroup,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from './components/dropdown-menu';

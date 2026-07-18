@@ -1,39 +1,27 @@
 'use client';
 
-import { Avatar, AvatarFallback, Button, Logo, Spinner, cn } from '@invincible/ui';
-import { CalendarDays, Clock, LayoutDashboard, LogOut, Ticket } from 'lucide-react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { Spinner } from '@invincible/ui';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import * as React from 'react';
 
-import { signOut, useSession } from '@/lib/auth-client';
+import { useSession } from '@/lib/auth-client';
 
-const navItems = [
-  { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, exact: true },
-  { href: '/dashboard/meeting-types', label: 'Meeting Types', icon: Ticket, exact: false },
-  { href: '/dashboard/schedules', label: 'Availability', icon: Clock, exact: false },
-  { href: '/dashboard/bookings', label: 'Bookings', icon: CalendarDays, exact: false },
-];
+import { SidebarNav } from './sidebar';
+import { Topbar } from './topbar';
 
-function initials(name: string): string {
-  return name
-    .split(' ')
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-}
-
+/**
+ * Premium dashboard shell: a fixed navigation rail on desktop, a slide-over
+ * drawer on mobile, a sticky glassy topbar, and an animated content area.
+ * Guards the route — unauthenticated visitors are redirected to sign in.
+ */
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
   const { data: session, isPending } = useSession();
+  const [mobileOpen, setMobileOpen] = React.useState(false);
 
   React.useEffect(() => {
-    if (!isPending && !session) {
-      router.replace('/login');
-    }
+    if (!isPending && !session) router.replace('/login');
   }, [isPending, session, router]);
 
   if (isPending || !session) {
@@ -44,66 +32,46 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const user = session.user;
-
   return (
-    <div className="flex min-h-screen">
-      <aside className="hidden w-64 shrink-0 flex-col border-r bg-card p-4 md:flex">
-        <div className="px-2 py-2">
-          <Logo />
-        </div>
-        <nav className="mt-6 flex flex-1 flex-col gap-1">
-          {navItems.map((item) => {
-            const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                  active
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
-                )}
-                aria-current={active ? 'page' : undefined}
-              >
-                <item.icon className="size-4" aria-hidden />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+    <div className="min-h-screen bg-muted/30">
+      {/* Desktop rail */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-border bg-card md:block">
+        <SidebarNav />
       </aside>
 
-      <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between border-b bg-card/50 px-6 py-3">
-          <div className="md:hidden">
-            <Logo showWordmark={false} />
-          </div>
-          <div className="ml-auto flex items-center gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium leading-tight">{user.name}</p>
-              <p className="text-xs text-muted-foreground">{user.email}</p>
-            </div>
-            <Avatar>
-              <AvatarFallback>{initials(user.name)}</AvatarFallback>
-            </Avatar>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Sign out"
-              onClick={() => {
-                void signOut().then(() => {
-                  router.replace('/login');
-                });
-              }}
+      {/* Mobile drawer */}
+      <AnimatePresence>
+        {mobileOpen ? (
+          <>
+            <motion.div
+              className="fixed inset-0 z-40 bg-foreground/40 backdrop-blur-sm md:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileOpen(false)}
+              aria-hidden
+            />
+            <motion.aside
+              className="fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-card md:hidden"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'tween', duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              role="dialog"
+              aria-label="Navigation"
             >
-              <LogOut className="size-4" aria-hidden />
-            </Button>
-          </div>
-        </header>
+              <SidebarNav onNavigate={() => setMobileOpen(false)} />
+            </motion.aside>
+          </>
+        ) : null}
+      </AnimatePresence>
 
-        <main className="flex-1 p-6">{children}</main>
+      <div className="md:pl-64">
+        <Topbar
+          user={{ name: session.user.name, email: session.user.email }}
+          onOpenSidebar={() => setMobileOpen(true)}
+        />
+        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
   );
