@@ -46,3 +46,20 @@ export function addDays(dateKey: string, days: number): string {
 export function todayInZone(timeZone: string): string {
   return calendarDate(new Date().toISOString(), timeZone);
 }
+
+/** Format integer minor units (e.g. cents) as currency. */
+export function formatMoney(amountMinor: number, currency = 'usd'): string {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+    }).format(amountMinor / 100);
+  } catch {
+    return `$${(amountMinor / 100).toFixed(2)}`;
+  }
+}
+
+/** "Monday, July 21 · 2:30 PM" style label for a slot in a zone. */
+export function formatSlotLong(iso: string, timeZone: string): string {
+  return `${formatDateHeading(calendarDate(iso, timeZone))} · ${formatTime(iso, timeZone)}`;
+}

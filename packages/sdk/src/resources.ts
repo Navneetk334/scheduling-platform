@@ -94,13 +94,65 @@ export class BookingsResource {
   }
 }
 
-export interface BookingPage {
-  organization: {
-    name: string;
+export interface Money {
+  amount: number; // minor units
+  currency: string;
+}
+
+export interface PublicOrganizationProfile {
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  timeZone: string;
+}
+
+export interface PublicService {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  durationMinutes: number;
+  kind: string;
+  color: string;
+  staffCount: number;
+  price: Money | null;
+}
+
+export interface PublicOrganization {
+  organization: PublicOrganizationProfile;
+  services: PublicService[];
+}
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  image: string | null;
+}
+
+/** Full booking detail returned by the public get-by-reference endpoint. */
+export interface BookingDetail {
+  id: string;
+  reference: string;
+  status: string;
+  startTime: string;
+  endTime: string;
+  timeZone: string;
+  meetingTypeId: string;
+  notes: string | null;
+  cancelReason: string | null;
+  guests: { id: string; name: string; email: string; role: string; isPrimary: boolean }[];
+  meetingType: {
+    id: string;
+    title: string;
     slug: string;
-    logoUrl: string | null;
-    timeZone: string;
+    durationMinutes: number;
+    color: string;
+    locationLinks: { location: { kind: string; value: string | null } }[];
   };
+}
+
+export interface BookingPage {
+  organization: PublicOrganizationProfile;
   meetingType: {
     id: string;
     title: string;
@@ -109,14 +161,20 @@ export interface BookingPage {
     durationMinutes: number;
     kind: string;
     color: string;
+    price: Money | null;
     locations: { type: string; value: string | null }[];
     host: { name: string; image: string | null; timeZone: string };
+    staff: StaffMember[];
   };
 }
 
 /** Unauthenticated public booking endpoints. */
 export class PublicResource {
   constructor(private readonly http: HttpClient) {}
+
+  getOrganization(orgSlug: string, options?: RequestOptions): Promise<PublicOrganization> {
+    return this.http.get(`/public/organizations/${orgSlug}`, options);
+  }
 
   getBookingPage(orgSlug: string, eventSlug: string, options?: RequestOptions): Promise<BookingPage> {
     return this.http.get(`/public/booking-pages/${orgSlug}/${eventSlug}`, options);
@@ -137,7 +195,7 @@ export class PublicResource {
     return this.http.post('/public/bookings', input, options);
   }
 
-  getBooking(reference: string, options?: RequestOptions): Promise<Booking> {
+  getBooking(reference: string, options?: RequestOptions): Promise<BookingDetail> {
     return this.http.get(`/public/bookings/${reference}`, options);
   }
 
@@ -147,5 +205,13 @@ export class PublicResource {
     options?: RequestOptions,
   ): Promise<Booking> {
     return this.http.post(`/public/bookings/${reference}/cancel`, input, options);
+  }
+
+  rescheduleBooking(
+    reference: string,
+    input: { startTime: string; reason?: string },
+    options?: RequestOptions,
+  ): Promise<Booking> {
+    return this.http.post(`/public/bookings/${reference}/reschedule`, input, options);
   }
 }

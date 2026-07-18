@@ -15,8 +15,12 @@ export const createBookingSchema = z.object({
     name: z.string().trim().min(1).max(150),
     email: emailSchema,
     timeZone: timeZoneSchema,
+    /** Optional E.164-ish phone; enables SMS/WhatsApp reminders. */
+    phone: z.string().trim().max(30).optional(),
     notes: z.string().trim().max(2000).optional(),
   }),
+  /** Selected host (staff) for round-robin/collective; server validates. */
+  hostId: z.string().min(1).optional(),
   guests: z.array(guestSchema).max(20).default([]),
   /** Client-supplied idempotency key to make retries safe. */
   idempotencyKey: z.string().uuid().optional(),

@@ -3,6 +3,7 @@ import {
   cancelBookingSchema,
   createBookingSchema,
   availabilityQuerySchema,
+  rescheduleBookingSchema,
   type CreateBookingInput,
 } from '@invincible/utils';
 
@@ -23,6 +24,11 @@ export class PublicController {
     private readonly availability: AvailabilityService,
     private readonly bookings: BookingsService,
   ) {}
+
+  @Get('organizations/:orgSlug')
+  getOrganization(@Param('orgSlug') orgSlug: string) {
+    return this.publicService.getOrganization(orgSlug);
+  }
 
   @Get('booking-pages/:orgSlug/:eventSlug')
   getBookingPage(@Param('orgSlug') orgSlug: string, @Param('eventSlug') eventSlug: string) {
@@ -56,5 +62,13 @@ export class PublicController {
     @Body(new ZodValidationPipe(cancelBookingSchema)) body: { reason?: string },
   ) {
     return this.bookings.cancelByReference(reference, body.reason);
+  }
+
+  @Post('bookings/:reference/reschedule')
+  rescheduleBooking(
+    @Param('reference') reference: string,
+    @Body(new ZodValidationPipe(rescheduleBookingSchema)) body: { startTime: string },
+  ) {
+    return this.bookings.rescheduleByReference(reference, body.startTime);
   }
 }

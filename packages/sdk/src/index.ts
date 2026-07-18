@@ -15,7 +15,15 @@ import {
 
 export * from './errors';
 export type { HttpClientConfig, RequestOptions } from './http-client';
-export type { BookingPage } from './resources';
+export type {
+  BookingDetail,
+  BookingPage,
+  Money,
+  PublicOrganization,
+  PublicOrganizationProfile,
+  PublicService,
+  StaffMember,
+} from './resources';
 
 export interface ApiClient {
   readonly http: HttpClient;

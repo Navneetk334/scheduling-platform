@@ -35,9 +35,18 @@ export class BookingsService {
 
     const meetingType = await this.prisma.meetingType.findFirst({
       where: { id: input.meetingTypeId, isActive: true, deletedAt: null },
-      include: { availability: true, locationLinks: { include: { location: true } } },
+      include: {
+        availability: true,
+        locationLinks: { include: { location: true } },
+        hosts: { select: { userId: true } },
+      },
     });
     if (!meetingType) throw AppError.notFound('Meeting type', input.meetingTypeId);
+
+    // Resolve the host: honor a valid requested staff member, else the owner.
+    const hostIds = new Set([meetingType.ownerId, ...meetingType.hosts.map((h) => h.userId)]);
+    const assignedHostId =
+      input.hostId && hostIds.has(input.hostId) ? input.hostId : meetingType.ownerId;
 
     const start = fromISO(input.startTime);
     const end = addMinutes(start, meetingType.durationMinutes);
@@ -78,6 +87,7 @@ export class BookingsService {
             role: 'INVITEE',
             name: input.invitee.name,
             email: input.invitee.email,
+            phone: input.invitee.phone ?? null,
             timeZone: input.invitee.timeZone,
             isPrimary: true,
           },
@@ -93,7 +103,7 @@ export class BookingsService {
           data: {
             organizationId: meetingType.organizationId,
             meetingTypeId: meetingType.id,
-            assignedHostId: meetingType.ownerId,
+            assignedHostId,
             locationId,
             status: 'CONFIRMED',
             startTime: start,
@@ -103,7 +113,7 @@ export class BookingsService {
             idempotencyKey: input.idempotencyKey ?? null,
             notes: input.invitee.notes ?? null,
             guests: { create: guests },
-            hosts: { create: [{ userId: meetingType.ownerId, role: 'ORGANIZER' }] },
+            hosts: { create: [{ userId: assignedHostId, role: 'ORGANIZER' }] },
           },
           include: { guests: true },
         });
@@ -123,6 +133,96 @@ export class BookingsService {
     });
     if (!booking) throw AppError.notFound('Booking', reference);
     return booking;
+  }
+
+  /**
+   * Reschedule a booking to a new start time: validates the new slot, marks the
+   * original as RESCHEDULED, and creates a linked replacement booking
+   * (preserving guests, host, and location) — all atomically and lock-guarded.
+   */
+  async rescheduleByReference(reference: string, startTime: string, now: Date = new Date()) {
+    const original = await this.prisma.booking.findUnique({
+      where: { reference },
+      include: {
+        guests: true,
+        meetingType: { include: { availability: true } },
+      },
+    });
+    if (!original) throw AppError.notFound('Booking', reference);
+    if (original.status === 'CANCELLED') {
+      throw AppError.conflict('A cancelled booking cannot be rescheduled.');
+    }
+
+    const meetingType = original.meetingType;
+    const start = fromISO(startTime);
+    const end = addMinutes(start, meetingType.durationMinutes);
+
+    const dateInZone = new Intl.DateTimeFormat('en-CA', {
+      timeZone: meetingType.availability.timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(start);
+
+    const slots = await this.availability.getSlots(meetingType.id, dateInZone, dateInZone, now);
+    const match = slots.find((s) => new Date(s.start).getTime() === start.getTime());
+    if (!match || match.seatsRemaining <= 0) {
+      throw AppError.slotUnavailable();
+    }
+
+    const lockKey = `booking:lock:${meetingType.id}:${start.toISOString()}`;
+    const release = await this.redis.acquireLock(lockKey, 10_000);
+    if (!release) {
+      throw AppError.slotUnavailable('This slot is currently being booked by someone else.');
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const confirmedCount = await tx.booking.count({
+          where: { meetingTypeId: meetingType.id, startTime: start, status: 'CONFIRMED' },
+        });
+        if (confirmedCount >= meetingType.seatsPerSlot) {
+          throw AppError.slotUnavailable();
+        }
+
+        await tx.booking.update({
+          where: { id: original.id },
+          data: { status: 'RESCHEDULED' },
+        });
+
+        return tx.booking.create({
+          data: {
+            organizationId: original.organizationId,
+            meetingTypeId: meetingType.id,
+            assignedHostId: original.assignedHostId,
+            locationId: original.locationId,
+            status: 'CONFIRMED',
+            startTime: start,
+            endTime: end,
+            timeZone: original.timeZone,
+            reference: await this.generateReference(tx),
+            notes: original.notes,
+            rescheduledFromId: original.id,
+            guests: {
+              create: original.guests.map((g) => ({
+                role: g.role,
+                name: g.name,
+                email: g.email,
+                phone: g.phone,
+                timeZone: g.timeZone,
+                isPrimary: g.isPrimary,
+              })),
+            },
+            hosts: original.assignedHostId
+              ? { create: [{ userId: original.assignedHostId, role: 'ORGANIZER' as const }] }
+              : undefined,
+          },
+          include: { guests: true },
+        });
+      });
+    } finally {
+      await release();
+    }
   }
 
   async cancelByReference(reference: string, reason?: string) {
