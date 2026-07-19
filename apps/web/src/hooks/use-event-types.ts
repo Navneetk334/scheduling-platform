@@ -1,7 +1,7 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CreateEventTypeInput } from '@invincible/utils';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getApiClient } from '@/lib/api';
 

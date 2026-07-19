@@ -1,0 +1,36 @@
+{
+  "name": "@invincible/integrations",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Framework-free provider integration framework: calendar, video, payment, email, SMS, CRM, automation and messaging adapters with OAuth, retry, webhooks and health checks.",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist .turbo coverage *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@invincible/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import {
   cancelBookingSchema,
   createBookingSchema,
   availabilityQuerySchema,
   type CreateBookingInput,
 } from '@invincible/utils';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AvailabilityService } from '../availability/availability.service';

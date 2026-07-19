@@ -1,9 +1,9 @@
+import { AppError, ErrorCode } from '@invincible/utils';
 import {
   type CanActivate,
   type ExecutionContext,
   Injectable,
 } from '@nestjs/common';
-import { AppError, ErrorCode } from '@invincible/utils';
 import type { Request } from 'express';
 
 import { AuthService, type SessionContext } from '../auth.service';

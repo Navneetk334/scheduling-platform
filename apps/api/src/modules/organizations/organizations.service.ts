@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable } from '@nestjs/common';
+import type { Membership, Organization } from '@invincible/database';
 import { AppError, ErrorCode, slugify } from '@invincible/utils';
 import type {
   CreateOrganizationInput,
   InviteMemberInput,
 } from '@invincible/utils';
-import type { Membership, Organization } from '@invincible/database';
+import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 

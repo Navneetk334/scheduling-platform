@@ -1,7 +1,7 @@
 import { type ExecutionContext, createParamDecorator } from '@nestjs/common';
 
-import type { AuthenticatedRequest } from '../guards/session-auth.guard';
 import type { SessionContext } from '../auth.service';
+import type { AuthenticatedRequest } from '../guards/session-auth.guard';
 
 /**
  * Injects the authenticated session (user + session) resolved by

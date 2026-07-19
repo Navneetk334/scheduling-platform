@@ -162,11 +162,14 @@ model Organization {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  memberships Membership[]
-  invitations Invitation[]
-  schedules   Schedule[]
-  eventTypes  EventType[]
-  bookings    Booking[]
+  memberships            Membership[]
+  invitations            Invitation[]
+  schedules              Schedule[]
+  eventTypes             EventType[]
+  bookings               Booking[]
+  integrationConnections IntegrationConnection[]
+  integrationLogs        IntegrationLog[]
+  webhookEndpoints       WebhookEndpoint[]
 
   @@map("organizations")
 }
@@ -392,4 +395,199 @@ model CalendarConnection {
   @@unique([userId, provider, externalId])
   @@index([userId])
   @@map("calendar_connections")
+}
+
+// ---------------------------------------------------------------------------
+// Integrations (calendar, video, payment, email, SMS, CRM, automation, chat)
+//
+// The provider catalog itself is code-driven (see @invincible/integrations).
+// These tables persist per-organization *connections*, an append-only audit
+// log, and outbound webhook subscriptions + their delivery attempts.
+// ---------------------------------------------------------------------------
+
+enum IntegrationCategory {
+  CALENDAR
+  VIDEO
+  PAYMENT
+  EMAIL
+  SMS
+  CRM
+  AUTOMATION
+  MESSAGING
+}
+
+/**
+ * How a connection authenticates against the third-party provider.
+ */
+enum IntegrationAuthType {
+  OAUTH2
+  API_KEY
+  BASIC
+  SMTP
+  WEBHOOK
+  NONE
+}
+
+enum IntegrationConnectionStatus {
+  PENDING
+  ACTIVE
+  DISABLED
+  EXPIRED
+  ERROR
+}
+
+/**
+ * Rolled-up health of a connection, refreshed by the health monitor.
+ */
+enum IntegrationHealthStatus {
+  UNKNOWN
+  HEALTHY
+  DEGRADED
+  UNHEALTHY
+}
+
+enum IntegrationLogDirection {
+  INBOUND
+  OUTBOUND
+  INTERNAL
+}
+
+enum IntegrationLogStatus {
+  SUCCESS
+  FAILURE
+  RETRYING
+  SKIPPED
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  DELIVERING
+  DELIVERED
+  RETRYING
+  FAILED
+  DEAD
+}
+
+/**
+ * A single configured provider connection for an organization. Credentials are
+ * stored encrypted (AES-256-GCM) in `encryptedCredentials`; never in plaintext.
+ */
+model IntegrationConnection {
+  id                   String                      @id @default(cuid())
+  organizationId       String
+  provider             String // stable provider id, e.g. "google_calendar"
+  category             IntegrationCategory
+  authType             IntegrationAuthType
+  displayName          String
+  status               IntegrationConnectionStatus @default(PENDING)
+  healthStatus         IntegrationHealthStatus     @default(UNKNOWN)
+  // Encrypted JSON credential blob (tokens / api keys / smtp password).
+  encryptedCredentials String?
+  // Non-secret, provider-specific configuration (region, from-address, etc.).
+  config               Json?
+  scopes               String[]                    @default([])
+  externalAccountId    String?
+  externalAccountEmail String?
+  // Opaque cursor for incremental background sync (e.g. calendar syncToken).
+  syncCursor           String?
+  tokenExpiresAt       DateTime?
+  lastError            String?
+  lastHealthCheckAt    DateTime?
+  lastSyncedAt         DateTime?
+  createdById          String?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  logs         IntegrationLog[]
+
+  @@unique([organizationId, provider, externalAccountId])
+  @@index([organizationId, category])
+  @@index([status])
+  @@index([healthStatus])
+  @@map("integration_connections")
+}
+
+/**
+ * Append-only audit trail of every integration action (outbound API calls,
+ * inbound webhooks, internal sync ticks). Powers the "Integration Logs" view.
+ */
+model IntegrationLog {
+  id              String                  @id @default(cuid())
+  organizationId  String
+  connectionId    String?
+  provider        String
+  category        IntegrationCategory
+  direction       IntegrationLogDirection
+  action          String
+  status          IntegrationLogStatus
+  httpStatus      Int?
+  durationMs      Int?
+  attempt         Int                     @default(1)
+  requestSummary  Json?
+  responseSummary Json?
+  error           String?
+  createdAt       DateTime                @default(now())
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  connection   IntegrationConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([connectionId, createdAt])
+  @@index([provider, status])
+  @@map("integration_logs")
+}
+
+/**
+ * Outbound webhook subscription. When platform events fire (booking.created,
+ * booking.cancelled, ...) a signed delivery is enqueued for each active,
+ * matching endpoint.
+ */
+model WebhookEndpoint {
+  id              String   @id @default(cuid())
+  organizationId  String
+  url             String
+  description     String?
+  // HMAC signing secret (encrypted at rest).
+  encryptedSecret String
+  events          String[] @default([])
+  isActive        Boolean  @default(true)
+  headers         Json?
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries   WebhookDelivery[]
+
+  @@index([organizationId])
+  @@map("webhook_endpoints")
+}
+
+/**
+ * A single delivery attempt lifecycle for an outbound webhook.
+ */
+model WebhookDelivery {
+  id             String                @id @default(cuid())
+  endpointId     String
+  organizationId String
+  eventType      String
+  payload        Json
+  status         WebhookDeliveryStatus @default(PENDING)
+  attempt        Int                   @default(0)
+  maxAttempts    Int                   @default(6)
+  responseStatus Int?
+  responseBody   String?
+  error          String?
+  nextAttemptAt  DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([endpointId, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("webhook_deliveries")
 }

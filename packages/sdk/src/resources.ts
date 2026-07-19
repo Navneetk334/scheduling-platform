@@ -1,13 +1,30 @@
-import type { AvailableSlot, Booking, EventType, Organization, Schedule } from '@invincible/types';
+import type {
+  AvailableSlot,
+  Booking,
+  EventType,
+  IntegrationConnection,
+  IntegrationHealthReport,
+  IntegrationLog,
+  Organization,
+  ProviderDescriptor,
+  Schedule,
+  WebhookDelivery,
+  WebhookEndpoint,
+} from '@invincible/types';
 import type {
   CancelBookingInput,
+  CreateConnectionInput,
   CreateBookingInput,
   CreateEventTypeInput,
   CreateOrganizationInput,
   CreateScheduleInput,
+  CreateWebhookEndpointInput,
   InviteMemberInput,
+  StartOAuthInput,
+  UpdateConnectionInput,
   UpdateEventTypeInput,
   UpdateScheduleInput,
+  UpdateWebhookEndpointInput,
 } from '@invincible/utils';
 
 import type { HttpClient, RequestOptions } from './http-client';
@@ -112,6 +129,104 @@ export interface BookingPage {
     locations: { type: string; value: string | null }[];
     host: { name: string; image: string | null; timeZone: string };
   };
+}
+
+/** Organization-scoped integration management (catalog, connections, webhooks). */
+export class IntegrationsResource {
+  constructor(private readonly http: HttpClient) {}
+
+  /** The full catalog of available providers (secret-free descriptors). */
+  catalog(options: OrgScoped): Promise<ProviderDescriptor[]> {
+    return this.http.get('/integrations/catalog', options);
+  }
+
+  listConnections(options: OrgScoped): Promise<IntegrationConnection[]> {
+    return this.http.get('/integrations/connections', options);
+  }
+
+  getConnection(id: string, options: OrgScoped): Promise<IntegrationConnection> {
+    return this.http.get(`/integrations/connections/${id}`, options);
+  }
+
+  /** Create a connection with directly-supplied credentials (non-OAuth). */
+  createConnection(
+    input: CreateConnectionInput,
+    options: OrgScoped,
+  ): Promise<IntegrationConnection> {
+    return this.http.post('/integrations/connections', input, options);
+  }
+
+  updateConnection(
+    id: string,
+    input: UpdateConnectionInput,
+    options: OrgScoped,
+  ): Promise<IntegrationConnection> {
+    return this.http.patch(`/integrations/connections/${id}`, input, options);
+  }
+
+  removeConnection(id: string, options: OrgScoped): Promise<void> {
+    return this.http.delete(`/integrations/connections/${id}`, options);
+  }
+
+  /** Run an on-demand health probe for a connection. */
+  verifyConnection(id: string, options: OrgScoped): Promise<IntegrationHealthReport> {
+    return this.http.post(`/integrations/connections/${id}/verify`, undefined, options);
+  }
+
+  /** Begin an OAuth authorize flow; returns the provider consent URL. */
+  startOAuth(input: StartOAuthInput, options: OrgScoped): Promise<{ authorizeUrl: string }> {
+    return this.http.post('/integrations/oauth/authorize', input, options);
+  }
+
+  listLogs(
+    options: OrgScoped & {
+      connectionId?: string;
+      provider?: string;
+      status?: string;
+      limit?: number;
+    },
+  ): Promise<IntegrationLog[]> {
+    const { connectionId, provider, status, limit, ...rest } = options;
+    return this.http.get('/integrations/logs', {
+      ...rest,
+      query: { connectionId, provider, status, limit },
+    });
+  }
+
+  // --- Outbound webhooks -----------------------------------------------------
+
+  listWebhookEndpoints(options: OrgScoped): Promise<WebhookEndpoint[]> {
+    return this.http.get('/integrations/webhook-endpoints', options);
+  }
+
+  createWebhookEndpoint(
+    input: CreateWebhookEndpointInput,
+    options: OrgScoped,
+  ): Promise<WebhookEndpoint & { secret: string }> {
+    return this.http.post('/integrations/webhook-endpoints', input, options);
+  }
+
+  updateWebhookEndpoint(
+    id: string,
+    input: UpdateWebhookEndpointInput,
+    options: OrgScoped,
+  ): Promise<WebhookEndpoint> {
+    return this.http.patch(`/integrations/webhook-endpoints/${id}`, input, options);
+  }
+
+  removeWebhookEndpoint(id: string, options: OrgScoped): Promise<void> {
+    return this.http.delete(`/integrations/webhook-endpoints/${id}`, options);
+  }
+
+  listWebhookDeliveries(
+    options: OrgScoped & { endpointId?: string },
+  ): Promise<WebhookDelivery[]> {
+    const { endpointId, ...rest } = options;
+    return this.http.get('/integrations/webhook-deliveries', {
+      ...rest,
+      query: { endpointId },
+    });
+  }
 }
 
 /** Unauthenticated public booking endpoints. */

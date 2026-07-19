@@ -6,6 +6,7 @@ import { HealthModule } from './health/health.module';
 import { AvailabilityModule } from './modules/availability/availability.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { EventTypesModule } from './modules/event-types/event-types.module';
+import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { PublicModule } from './modules/public/public.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
@@ -27,6 +28,7 @@ import { RedisModule } from './redis/redis.module';
     AvailabilityModule,
     BookingsModule,
     PublicModule,
+    IntegrationsModule,
   ],
 })
 export class AppModule {}

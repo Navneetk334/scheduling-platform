@@ -1,13 +1,13 @@
+import type { Membership } from '@invincible/database';
+import { AppError, ErrorCode } from '@invincible/utils';
 import {
   type CanActivate,
   type ExecutionContext,
   Injectable,
 } from '@nestjs/common';
-import { AppError, ErrorCode } from '@invincible/utils';
-import type { Membership } from '@invincible/database';
 
-import { OrganizationsService } from '../../modules/organizations/organizations.service';
 import type { AuthenticatedRequest } from '../../auth/guards/session-auth.guard';
+import { OrganizationsService } from '../../modules/organizations/organizations.service';
 
 export interface TenantRequest extends AuthenticatedRequest {
   tenant?: { organizationId: string; membership: Membership };

@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import type { AvailableSlot } from '@invincible/types';
 import { AppError } from '@invincible/utils';
 import { generateAvailableSlots, type Interval } from '@invincible/utils';
-import type { AvailableSlot } from '@invincible/types';
+import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 

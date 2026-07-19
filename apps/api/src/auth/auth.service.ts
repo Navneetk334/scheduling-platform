@@ -1,8 +1,9 @@
+import type { IncomingHttpHeaders } from 'node:http';
+
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { fromNodeHeaders, toNodeHandler } from 'better-auth/node';
-import type { IncomingHttpHeaders } from 'node:http';
 
 import { AppConfigService } from '../config/app-config.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -75,6 +76,6 @@ export class AuthService implements OnModuleInit {
       headers: fromNodeHeaders(headers),
     });
     if (!result) return null;
-    return result as unknown as SessionContext;
+    return result;
   }
 }

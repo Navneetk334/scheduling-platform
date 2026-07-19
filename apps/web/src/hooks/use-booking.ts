@@ -1,8 +1,8 @@
 'use client';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
 import type { AvailableSlot, Booking } from '@invincible/types';
 import type { CreateBookingInput } from '@invincible/utils';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { getApiClient } from '@/lib/api';
 

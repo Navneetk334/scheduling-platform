@@ -1,4 +1,10 @@
 import {
+  createScheduleSchema,
+  updateScheduleSchema,
+  type CreateScheduleInput,
+  type UpdateScheduleInput,
+} from '@invincible/utils';
+import {
   Body,
   Controller,
   Delete,
@@ -9,19 +15,13 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import {
-  createScheduleSchema,
-  updateScheduleSchema,
-  type CreateScheduleInput,
-  type UpdateScheduleInput,
-} from '@invincible/utils';
 
+import type { SessionContext } from '../../auth/auth.service';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { SessionAuthGuard } from '../../auth/guards/session-auth.guard';
 import { ActiveOrganizationId } from '../../common/decorators/active-organization.decorator';
 import { OrgMembershipGuard } from '../../common/guards/org-membership.guard';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import type { SessionContext } from '../../auth/auth.service';
 
 import { SchedulesService } from './schedules.service';
 

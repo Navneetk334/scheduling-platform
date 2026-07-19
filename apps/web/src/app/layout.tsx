@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import * as React from 'react';
 
+import { Providers } from './providers';
+
 import { env } from '@/lib/env';
 
-import { Providers } from './providers';
 
 import './globals.css';
 
