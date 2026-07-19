@@ -35,6 +35,18 @@ export class PublicController {
     return this.publicService.getBookingPage(orgSlug, eventSlug);
   }
 
+  /** White-label branding for an organization slug. */
+  @Get('branding/:orgSlug')
+  getBranding(@Param('orgSlug') orgSlug: string) {
+    return this.publicService.getBranding(orgSlug);
+  }
+
+  /** White-label branding resolved from an active custom domain/subdomain. */
+  @Get('branding-by-domain/:hostname')
+  getBrandingByDomain(@Param('hostname') hostname: string) {
+    return this.publicService.getBrandingByDomain(hostname);
+  }
+
   @Get('meeting-types/:meetingTypeId/availability')
   getAvailability(
     @Param('meetingTypeId') meetingTypeId: string,

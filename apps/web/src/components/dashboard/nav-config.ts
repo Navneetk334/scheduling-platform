@@ -21,6 +21,7 @@ import {
   Wallet,
   Webhook,
   Settings as SettingsIcon,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -88,6 +89,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Settings', href: '/dashboard/settings', icon: SettingsIcon },
       { label: 'Security', href: '/dashboard/security', icon: ShieldCheck },
       { label: 'Appearance', href: '/dashboard/appearance', icon: Palette },
+      { label: 'White Label', href: '/dashboard/white-label', icon: Sparkles },
     ],
   },
   {

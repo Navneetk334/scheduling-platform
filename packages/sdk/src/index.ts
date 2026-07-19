@@ -12,6 +12,14 @@ import {
   PublicResource,
   SchedulesResource,
 } from './resources';
+import {
+  AssetsResource,
+  BrandingResource,
+  BrandsResource,
+  DomainsResource,
+  LegalResource,
+  TemplatesResource,
+} from './white-label';
 
 export * from './errors';
 export type { HttpClientConfig, RequestOptions } from './http-client';
@@ -24,6 +32,15 @@ export type {
   PublicService,
   StaffMember,
 } from './resources';
+export type { RenderedTemplate } from './white-label';
+export {
+  AssetsResource,
+  BrandingResource,
+  BrandsResource,
+  DomainsResource,
+  LegalResource,
+  TemplatesResource,
+} from './white-label';
 
 export interface ApiClient {
   readonly http: HttpClient;
@@ -32,6 +49,13 @@ export interface ApiClient {
   readonly meetingTypes: MeetingTypesResource;
   readonly bookings: BookingsResource;
   readonly public: PublicResource;
+  // White label
+  readonly brands: BrandsResource;
+  readonly domains: DomainsResource;
+  readonly templates: TemplatesResource;
+  readonly legal: LegalResource;
+  readonly assets: AssetsResource;
+  readonly branding: BrandingResource;
 }
 
 /** Create a fully-typed API client instance. */
@@ -44,5 +68,11 @@ export function createApiClient(config: HttpClientConfig): ApiClient {
     meetingTypes: new MeetingTypesResource(http),
     bookings: new BookingsResource(http),
     public: new PublicResource(http),
+    brands: new BrandsResource(http),
+    domains: new DomainsResource(http),
+    templates: new TemplatesResource(http),
+    legal: new LegalResource(http),
+    assets: new AssetsResource(http),
+    branding: new BrandingResource(http),
   };
 }

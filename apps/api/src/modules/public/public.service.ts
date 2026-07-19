@@ -1,7 +1,43 @@
 import { Injectable } from '@nestjs/common';
 import { AppError } from '@invincible/utils';
+import type { Brand, BrandTheme, Prisma } from '@invincible/database';
 
 import { PrismaService } from '../../prisma/prisma.service';
+
+type BrandWithThemes = Brand & { themes: BrandTheme[] };
+
+const defaultBrandInclude = {
+  where: { isDefault: true, isActive: true, deletedAt: null },
+  include: { themes: { orderBy: { mode: 'asc' as const } } },
+  take: 1,
+} satisfies Prisma.Organization$brandsArgs;
+
+/** Shape the public, unauthenticated branding payload from a brand row. */
+function toPublicBranding(brand: BrandWithThemes | undefined) {
+  if (!brand) return null;
+  return {
+    brandName: brand.name,
+    slug: brand.slug,
+    logoUrl: brand.logoUrl,
+    logoDarkUrl: brand.logoDarkUrl,
+    faviconUrl: brand.faviconUrl,
+    primaryColor: brand.primaryColor,
+    accentColor: brand.accentColor,
+    backgroundColor: brand.backgroundColor,
+    foregroundColor: brand.foregroundColor,
+    headingFont: brand.headingFont,
+    bodyFont: brand.bodyFont,
+    customFontUrl: brand.customFontUrl,
+    defaultThemeMode: brand.defaultThemeMode,
+    customCss: brand.customCss,
+    footerHtml: brand.footerHtml,
+    removeBranding: brand.removeBranding,
+    loginHeadline: brand.loginHeadline,
+    loginSubheadline: brand.loginSubheadline,
+    loginImageUrl: brand.loginImageUrl,
+    themes: brand.themes.map((t) => ({ mode: t.mode, tokens: t.tokens })),
+  };
+}
 
 @Injectable()
 export class PublicService {
@@ -11,9 +47,11 @@ export class PublicService {
   async getOrganization(orgSlug: string) {
     const organization = await this.prisma.organization.findFirst({
       where: { slug: orgSlug, deletedAt: null },
-      include: { branding: true },
+      include: { brands: defaultBrandInclude },
     });
     if (!organization) throw AppError.notFound('Organization', orgSlug);
+
+    const branding = toPublicBranding(organization.brands[0]);
 
     const services = await this.prisma.meetingType.findMany({
       where: { organizationId: organization.id, isActive: true, deletedAt: null },
@@ -25,9 +63,10 @@ export class PublicService {
       organization: {
         name: organization.name,
         slug: organization.slug,
-        logoUrl: organization.branding?.logoUrl ?? null,
+        logoUrl: branding?.logoUrl ?? null,
         timeZone: organization.timeZone,
       },
+      branding,
       services: services.map((s) => ({
         id: s.id,
         title: s.title,
@@ -46,9 +85,11 @@ export class PublicService {
   async getBookingPage(orgSlug: string, eventSlug: string) {
     const organization = await this.prisma.organization.findFirst({
       where: { slug: orgSlug, deletedAt: null },
-      include: { branding: true },
+      include: { brands: defaultBrandInclude },
     });
     if (!organization) throw AppError.notFound('Organization', orgSlug);
+
+    const branding = toPublicBranding(organization.brands[0]);
 
     const meetingType = await this.prisma.meetingType.findFirst({
       where: {
@@ -78,9 +119,10 @@ export class PublicService {
       organization: {
         name: organization.name,
         slug: organization.slug,
-        logoUrl: organization.branding?.logoUrl ?? null,
+        logoUrl: branding?.logoUrl ?? null,
         timeZone: organization.timeZone,
       },
+      branding,
       meetingType: {
         id: meetingType.id,
         title: meetingType.title,
@@ -104,6 +146,50 @@ export class PublicService {
         },
         staff,
       },
+    };
+  }
+
+  /** Resolve the branding for an organization slug (for theming booking/login pages). */
+  async getBranding(orgSlug: string) {
+    const organization = await this.prisma.organization.findFirst({
+      where: { slug: orgSlug, deletedAt: null },
+      include: { brands: defaultBrandInclude },
+    });
+    if (!organization) throw AppError.notFound('Organization', orgSlug);
+    return {
+      organization: { name: organization.name, slug: organization.slug },
+      branding: toPublicBranding(organization.brands[0]),
+    };
+  }
+
+  /**
+   * Resolve branding by an active custom domain/subdomain. Uses the domain's
+   * linked brand when set, otherwise the organization's default brand. Powers
+   * white-label booking pages served on customer domains.
+   */
+  async getBrandingByDomain(hostname: string) {
+    const domain = await this.prisma.domain.findFirst({
+      where: { hostname: hostname.toLowerCase(), status: 'ACTIVE' },
+      include: {
+        organization: { select: { name: true, slug: true } },
+        brand: { include: { themes: { orderBy: { mode: 'asc' } } } },
+      },
+    });
+    if (!domain) throw AppError.notFound('Domain', hostname);
+
+    let brand = domain.brand as BrandWithThemes | null;
+    if (!brand) {
+      brand =
+        (await this.prisma.brand.findFirst({
+          where: { organizationId: domain.organizationId, isDefault: true, deletedAt: null },
+          include: { themes: { orderBy: { mode: 'asc' } } },
+        })) ?? null;
+    }
+
+    return {
+      organization: domain.organization,
+      hostname: domain.hostname,
+      branding: toPublicBranding(brand ?? undefined),
     };
   }
 }

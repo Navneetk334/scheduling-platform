@@ -21,6 +21,7 @@ import { MeetingTypesModule } from './modules/meeting-types/meeting-types.module
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { PublicModule } from './modules/public/public.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
+import { WhiteLabelModule } from './modules/white-label/white-label.module';
 import { MetricsInterceptor } from './observability/metrics.interceptor';
 import { ObservabilityModule } from './observability/observability.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -63,6 +64,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     WebhooksModule,
     JobsModule,
     PublicModule,
+    WhiteLabelModule,
     GraphqlModule,
   ],
   providers: [

@@ -235,6 +235,52 @@ enum SslStatus {
   FAILED
 }
 
+/// How a domain maps to the platform: a *.platform subdomain or a fully custom hostname.
+enum DomainKind {
+  SUBDOMAIN
+  CUSTOM
+}
+
+/// Default interface theme a brand renders with.
+enum ThemeMode {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+/// Category of a stored brand asset.
+enum BrandAssetType {
+  LOGO
+  LOGO_DARK
+  FAVICON
+  OG_IMAGE
+  FONT
+  IMAGE
+}
+
+/// The transactional message a template renders. Shared by email + SMS channels.
+enum TemplateType {
+  BOOKING_CONFIRMATION
+  BOOKING_REMINDER
+  BOOKING_RESCHEDULED
+  BOOKING_CANCELLED
+  BOOKING_FOLLOW_UP
+  WAITLIST_CONFIRMATION
+  PAYMENT_RECEIPT
+  INVOICE_ISSUED
+  TEAM_INVITE
+  WELCOME
+  PASSWORD_RESET
+  CUSTOM
+}
+
+/// Legal document variants an organization can override per brand.
+enum LegalDocumentType {
+  PRIVACY_POLICY
+  TERMS_OF_SERVICE
+  COOKIE_POLICY
+}
+
 enum AuditActorType {
   USER
   SYSTEM
@@ -384,9 +430,12 @@ model Organization {
   referralsMade     Referral[]         @relation("Referrer")
   referralsReceived Referral[]         @relation("Referred")
 
-  // Branding & distribution
-  branding Branding?
-  domains  Domain[]
+  // White label & distribution
+  brands           Brand[]
+  brandAssets      BrandAsset[]
+  messageTemplates MessageTemplate[]
+  legalDocuments   LegalDocument[]
+  domains          Domain[]
 
   @@index([deletedAt])
   @@map("organizations")
@@ -1254,45 +1303,203 @@ model OrganizationFeatureFlag {
   @@map("organization_feature_flags")
 }
 
-/// White-label branding (1:1 with organization).
-model Branding {
-  id               String   @id @default(cuid())
-  organizationId   String   @unique
-  logoUrl          String?
-  faviconUrl       String?
-  primaryColor     String   @default("#4F46E5")
-  accentColor      String   @default("#06B6D4")
+// ===========================================================================
+// White label
+// ---------------------------------------------------------------------------
+// An organization may own MANY brands (multi-brand). Each brand fully
+// customizes booking pages, emails, login, legal docs, colors, fonts, and
+// (optionally) its own custom domain. Exactly one brand per org is `isDefault`.
+// ===========================================================================
+
+/// A fully customizable brand identity owned by an organization.
+model Brand {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String
+  /// URL-safe handle, unique within the organization; used in branded URLs.
+  slug           String
+  isDefault      Boolean @default(false)
+  isActive       Boolean @default(true)
+
+  // Visual identity
+  logoUrl     String?
+  logoDarkUrl String?
+  faviconUrl  String?
+  ogImageUrl  String?
+
+  // Color tokens (hex). Per-mode token sets live in BrandTheme.
+  primaryColor    String @default("#4F46E5")
+  accentColor     String @default("#06B6D4")
+  backgroundColor String @default("#FFFFFF")
+  foregroundColor String @default("#0F172A")
+
+  // Typography
+  headingFont   String  @default("Inter")
+  bodyFont      String  @default("Inter")
+  customFontUrl String?
+
+  // Presentation
+  defaultThemeMode ThemeMode @default(SYSTEM)
+  customCss        String?
+  footerHtml       String?
+  /// Hide "Powered by INVINCIBLE PROS" across booking pages, emails, etc.
+  removeBranding   Boolean   @default(false)
+
+  // Custom login page
+  loginHeadline    String?
+  loginSubheadline String?
+  loginImageUrl    String?
+
+  // Messaging identity
   emailFromName    String?
   emailFromAddress String?
+  emailReplyTo     String?
   supportEmail     String?
-  customCss        String?
-  removeBranding   Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  smsSenderId      String?
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
-  @@map("branding")
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  themes         BrandTheme[]
+  assets         BrandAsset[]
+  templates      MessageTemplate[]
+  legalDocuments LegalDocument[]
+  domains        Domain[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@map("brands")
 }
 
-model Domain {
-  id                String       @id @default(cuid())
-  organizationId    String
-  hostname          String       @unique
-  isPrimary         Boolean      @default(false)
-  status            DomainStatus @default(PENDING)
-  verificationToken String?
-  sslStatus         SslStatus    @default(NONE)
-  verifiedAt        DateTime?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+/// A per-mode set of design tokens (light/dark) for a brand.
+model BrandTheme {
+  id        String    @id @default(cuid())
+  brandId   String
+  mode      ThemeMode
+  /// Design tokens: background, foreground, primary, accent, muted, border, radius…
+  tokens    Json
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, mode])
+  @@index([brandId])
+  @@map("brand_themes")
+}
+
+/// Reusable brand asset (logo, favicon, font, image) stored in the asset library.
+model BrandAsset {
+  id             String         @id @default(cuid())
+  organizationId String
+  brandId        String?
+  type           BrandAssetType
+  name           String
+  url            String
+  mimeType       String?
+  sizeBytes      Int?
+  width          Int?
+  height         Int?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand?       @relation(fields: [brandId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
-  @@map("domains")
+  @@index([brandId])
+  @@map("brand_assets")
 }
 
+/// A branded, overridable email/SMS template for a transactional message.
+model MessageTemplate {
+  id             String              @id @default(cuid())
+  organizationId String
+  /// Null = organization-wide default; set = brand-specific override.
+  brandId        String?
+  channel        NotificationChannel
+  type           TemplateType
+  name           String
+  /// Email only; SMS ignores subject.
+  subject        String?
+  bodyHtml       String?
+  bodyText       String
+  /// Declared template variables, e.g. { "guestName": "Invitee full name" }.
+  variables      Json?
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand?       @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, brandId, channel, type])
+  @@index([organizationId])
+  @@index([brandId])
+  @@map("message_templates")
+}
+
+/// Custom legal document (privacy/terms/cookie) overriding platform defaults.
+model LegalDocument {
+  id             String            @id @default(cuid())
+  organizationId String
+  brandId        String?
+  type           LegalDocumentType
+  title          String
+  content        String
+  version        Int               @default(1)
+  publishedAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand?       @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, brandId, type])
+  @@index([organizationId])
+  @@index([brandId])
+  @@map("legal_documents")
+}
+
+/// A custom domain or platform subdomain, with DNS + SSL provisioning state.
+model Domain {
+  id             String     @id @default(cuid())
+  organizationId String
+  brandId        String?
+  kind           DomainKind @default(CUSTOM)
+  /// Full hostname, e.g. "book.acme.com" or "acme.invinciblepros.app".
+  hostname       String     @unique
+  /// Subdomain label when kind = SUBDOMAIN (e.g. "acme").
+  subdomain      String?
+  isPrimary      Boolean    @default(false)
+
+  // Verification
+  status            DomainStatus @default(PENDING)
+  verificationToken String?
+  /// Expected DNS records the customer must add (TXT/CNAME) for verification.
+  dnsRecords        Json?
+  verifiedAt        DateTime?
+  dnsVerifiedAt     DateTime?
+  lastCheckedAt     DateTime?
+  failureReason     String?
+
+  // TLS
+  sslStatus    SslStatus @default(NONE)
+  sslIssuedAt  DateTime?
+  sslExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brand        Brand?       @relation(fields: [brandId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([brandId])
+  @@map("domains")
+}
 
 // ===========================================================================
 // Billing extensions: payment methods, usage metering, referrals, campaigns

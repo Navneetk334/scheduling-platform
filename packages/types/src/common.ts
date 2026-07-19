@@ -13,15 +13,20 @@ export type IANATimeZone = string;
 export type MinutesOfDay = number;
 
 /** Branded ID helper to prevent mixing entity identifiers at the type level. */
-export type Brand<T, B extends string> = T & { readonly __brand: B };
+export type Branded<T, B extends string> = T & { readonly __brand: B };
 
-export type OrganizationId = Brand<string, 'OrganizationId'>;
-export type UserId = Brand<string, 'UserId'>;
-export type MembershipId = Brand<string, 'MembershipId'>;
-export type ScheduleId = Brand<string, 'ScheduleId'>;
-export type MeetingTypeId = Brand<string, 'MeetingTypeId'>;
-export type BookingId = Brand<string, 'BookingId'>;
-export type GuestId = Brand<string, 'GuestId'>;
+export type OrganizationId = Branded<string, 'OrganizationId'>;
+export type UserId = Branded<string, 'UserId'>;
+export type MembershipId = Branded<string, 'MembershipId'>;
+export type ScheduleId = Branded<string, 'ScheduleId'>;
+export type MeetingTypeId = Branded<string, 'MeetingTypeId'>;
+export type BookingId = Branded<string, 'BookingId'>;
+export type GuestId = Branded<string, 'GuestId'>;
+export type BrandId = Branded<string, 'BrandId'>;
+export type DomainId = Branded<string, 'DomainId'>;
+export type BrandAssetId = Branded<string, 'BrandAssetId'>;
+export type MessageTemplateId = Branded<string, 'MessageTemplateId'>;
+export type LegalDocumentId = Branded<string, 'LegalDocumentId'>;
 
 /** A half-open time interval [start, end). */
 export interface TimeInterval {

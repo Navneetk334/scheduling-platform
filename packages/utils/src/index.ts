@@ -12,6 +12,7 @@ export * from './datetime';
 export * from './errors';
 export * from './result';
 export * from './slug';
+export * from './theme';
 export * from './validation';
 export * from './scheduling';
 export * from './billing';
