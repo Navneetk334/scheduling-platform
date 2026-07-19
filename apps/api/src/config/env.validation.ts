@@ -17,6 +17,36 @@ export const envSchema = z.object({
   BETTER_AUTH_URL: z.string().url().default('http://localhost:4000'),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+
+  // --- Integrations ---------------------------------------------------------
+  // Symmetric key used to encrypt provider credentials at rest (AES-256-GCM).
+  // MUST be overridden with a strong random value in production.
+  INTEGRATIONS_ENCRYPTION_KEY: z
+    .string()
+    .min(16, 'INTEGRATIONS_ENCRYPTION_KEY must be at least 16 chars.')
+    .default('dev-integrations-encryption-key-change-me'),
+  // Toggle for the interval-based background workers (disable in tests).
+  INTEGRATIONS_BACKGROUND_JOBS: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  INTEGRATIONS_HEALTH_INTERVAL_MS: z.coerce.number().int().min(10_000).default(300_000),
+  INTEGRATIONS_SYNC_INTERVAL_MS: z.coerce.number().int().min(10_000).default(600_000),
+  INTEGRATIONS_WEBHOOK_INTERVAL_MS: z.coerce.number().int().min(1_000).default(15_000),
+
+  // --- Provider OAuth client credentials (all optional) ---------------------
+  GOOGLE_CLIENT_ID: z.string().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().default(''),
+  MICROSOFT_CLIENT_ID: z.string().default(''),
+  MICROSOFT_CLIENT_SECRET: z.string().default(''),
+  ZOOM_CLIENT_ID: z.string().default(''),
+  ZOOM_CLIENT_SECRET: z.string().default(''),
+  HUBSPOT_CLIENT_ID: z.string().default(''),
+  HUBSPOT_CLIENT_SECRET: z.string().default(''),
+  SALESFORCE_CLIENT_ID: z.string().default(''),
+  SALESFORCE_CLIENT_SECRET: z.string().default(''),
+  ZOHO_CLIENT_ID: z.string().default(''),
+  ZOHO_CLIENT_SECRET: z.string().default(''),
 });
 
 export type Env = z.infer<typeof envSchema>;

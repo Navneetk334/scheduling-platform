@@ -33,7 +33,16 @@ async function bootstrap(): Promise<void> {
   const expressApp = app.getHttpAdapter().getInstance();
   // Mount Better Auth first (raw body), then JSON-parse the rest.
   expressApp.all('/api/auth/*', auth.nodeHandler);
-  expressApp.use(express.json({ limit: '1mb' }));
+  // Capture the raw request body so integration webhook handlers can verify
+  // provider signatures (Stripe/Razorpay/etc.) against the exact bytes.
+  expressApp.use(
+    express.json({
+      limit: '1mb',
+      verify: (req: express.Request & { rawBody?: string }, _res, buf: Buffer) => {
+        req.rawBody = buf.toString('utf8');
+      },
+    }),
+  );
   expressApp.use(express.urlencoded({ extended: true }));
 
   app.setGlobalPrefix('api', { exclude: ['api/auth/(.*)'] });

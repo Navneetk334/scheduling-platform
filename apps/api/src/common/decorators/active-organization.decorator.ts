@@ -1,5 +1,5 @@
-import { type ExecutionContext, createParamDecorator } from '@nestjs/common';
 import type { Membership } from '@invincible/database';
+import { type ExecutionContext, createParamDecorator } from '@nestjs/common';
 
 import type { TenantRequest } from '../guards/org-membership.guard';
 

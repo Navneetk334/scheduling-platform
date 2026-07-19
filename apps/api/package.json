@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@invincible/database": "workspace:*",
+    "@invincible/integrations": "workspace:*",
     "@invincible/types": "workspace:*",
     "@invincible/utils": "workspace:*",
     "@nestjs/common": "^10.4.15",

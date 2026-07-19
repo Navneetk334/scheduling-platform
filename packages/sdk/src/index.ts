@@ -8,6 +8,7 @@ import { HttpClient, type HttpClientConfig } from './http-client';
 import {
   BookingsResource,
   EventTypesResource,
+  IntegrationsResource,
   OrganizationsResource,
   PublicResource,
   SchedulesResource,
@@ -23,6 +24,7 @@ export interface ApiClient {
   readonly schedules: SchedulesResource;
   readonly eventTypes: EventTypesResource;
   readonly bookings: BookingsResource;
+  readonly integrations: IntegrationsResource;
   readonly public: PublicResource;
 }
 
@@ -35,6 +37,7 @@ export function createApiClient(config: HttpClientConfig): ApiClient {
     schedules: new SchedulesResource(http),
     eventTypes: new EventTypesResource(http),
     bookings: new BookingsResource(http),
+    integrations: new IntegrationsResource(http),
     public: new PublicResource(http),
   };
 }

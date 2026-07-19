@@ -1,3 +1,5 @@
+import type { AppErrorShape } from '@invincible/types';
+import { AppError, ErrorCode, isAppError } from '@invincible/utils';
 import {
   type ArgumentsHost,
   Catch,
@@ -5,8 +7,6 @@ import {
   HttpException,
   Logger,
 } from '@nestjs/common';
-import { AppError, ErrorCode, isAppError } from '@invincible/utils';
-import type { AppErrorShape } from '@invincible/types';
 import type { Request, Response } from 'express';
 import { ZodError } from 'zod';
 

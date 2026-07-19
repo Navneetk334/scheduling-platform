@@ -61,7 +61,7 @@ export default function SignupPage() {
         <CardDescription>Start scheduling in minutes — no credit card required.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
           {formError ? (
             <Alert variant="destructive">
               <AlertDescription>{formError}</AlertDescription>

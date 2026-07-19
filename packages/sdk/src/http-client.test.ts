@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { SdkError } from './errors';
+
 import { createApiClient } from './index';
 
 function mockResponse(body: unknown, init: { status?: number } = {}): Response {

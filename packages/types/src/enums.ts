@@ -80,3 +80,78 @@ export const NotificationChannel = {
   Webhook: 'WEBHOOK',
 } as const;
 export type NotificationChannel = (typeof NotificationChannel)[keyof typeof NotificationChannel];
+
+// ---------------------------------------------------------------------------
+// Integrations
+// ---------------------------------------------------------------------------
+
+/** Top-level grouping of what a provider integration does. */
+export const IntegrationCategory = {
+  Calendar: 'CALENDAR',
+  Video: 'VIDEO',
+  Payment: 'PAYMENT',
+  Email: 'EMAIL',
+  Sms: 'SMS',
+  Crm: 'CRM',
+  Automation: 'AUTOMATION',
+  Messaging: 'MESSAGING',
+} as const;
+export type IntegrationCategory = (typeof IntegrationCategory)[keyof typeof IntegrationCategory];
+
+/** How a connection authenticates against the third-party provider. */
+export const IntegrationAuthType = {
+  OAuth2: 'OAUTH2',
+  ApiKey: 'API_KEY',
+  Basic: 'BASIC',
+  Smtp: 'SMTP',
+  Webhook: 'WEBHOOK',
+  None: 'NONE',
+} as const;
+export type IntegrationAuthType = (typeof IntegrationAuthType)[keyof typeof IntegrationAuthType];
+
+export const IntegrationConnectionStatus = {
+  Pending: 'PENDING',
+  Active: 'ACTIVE',
+  Disabled: 'DISABLED',
+  Expired: 'EXPIRED',
+  Error: 'ERROR',
+} as const;
+export type IntegrationConnectionStatus =
+  (typeof IntegrationConnectionStatus)[keyof typeof IntegrationConnectionStatus];
+
+export const IntegrationHealthStatus = {
+  Unknown: 'UNKNOWN',
+  Healthy: 'HEALTHY',
+  Degraded: 'DEGRADED',
+  Unhealthy: 'UNHEALTHY',
+} as const;
+export type IntegrationHealthStatus =
+  (typeof IntegrationHealthStatus)[keyof typeof IntegrationHealthStatus];
+
+export const IntegrationLogDirection = {
+  Inbound: 'INBOUND',
+  Outbound: 'OUTBOUND',
+  Internal: 'INTERNAL',
+} as const;
+export type IntegrationLogDirection =
+  (typeof IntegrationLogDirection)[keyof typeof IntegrationLogDirection];
+
+export const IntegrationLogStatus = {
+  Success: 'SUCCESS',
+  Failure: 'FAILURE',
+  Retrying: 'RETRYING',
+  Skipped: 'SKIPPED',
+} as const;
+export type IntegrationLogStatus =
+  (typeof IntegrationLogStatus)[keyof typeof IntegrationLogStatus];
+
+export const WebhookDeliveryStatus = {
+  Pending: 'PENDING',
+  Delivering: 'DELIVERING',
+  Delivered: 'DELIVERED',
+  Retrying: 'RETRYING',
+  Failed: 'FAILED',
+  Dead: 'DEAD',
+} as const;
+export type WebhookDeliveryStatus =
+  (typeof WebhookDeliveryStatus)[keyof typeof WebhookDeliveryStatus];

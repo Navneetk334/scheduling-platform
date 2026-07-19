@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
 import { AppError, slugify } from '@invincible/utils';
 import type {
   CreateEventTypeInput,
   UpdateEventTypeInput,
 } from '@invincible/utils';
+import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 

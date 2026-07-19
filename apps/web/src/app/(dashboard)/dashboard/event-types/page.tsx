@@ -36,7 +36,7 @@ export default function EventTypesPage() {
       {isError ? (
         <Alert variant="destructive">
           <AlertDescription>
-            {(error as Error)?.message ?? 'Failed to load event types.'}
+            {(error)?.message ?? 'Failed to load event types.'}
           </AlertDescription>
         </Alert>
       ) : null}

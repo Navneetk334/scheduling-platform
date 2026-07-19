@@ -38,6 +38,7 @@ modular, production-ready architecture.
 │  ├─ types/         # Framework-free shared domain types + enums
 │  ├─ utils/         # Datetime/timezone, Zod schemas, errors, scheduling engine
 │  ├─ database/      # Prisma schema, client, migrations, seed
+│  ├─ integrations/  # Provider integration framework + adapters (calendar, …)
 │  ├─ ui/            # Design system (tokens, Tailwind preset, components)
 │  └─ sdk/           # Typed API client consumed by the web app
 ├─ docker-compose.yml
@@ -46,6 +47,17 @@ modular, production-ready architecture.
 
 ### Architectural highlights
 
+- **Modular integration framework** (`packages/integrations`) — a framework-free
+  plugin system with one capability interface per category (calendar, video,
+  payment, email, SMS, CRM, automation, messaging) and a provider registry.
+  Ships adapters for Google/Outlook/Apple calendars, Google Meet/Zoom/Teams,
+  Stripe/Razorpay/PayPal, Resend/SMTP/Mailgun, Twilio/MessageBird,
+  HubSpot/Salesforce/Zoho/Pipedrive, Zapier/Make/n8n and Slack/Teams/Discord.
+  Adding a provider is a single `registry.register(...)` call. Cross-cutting
+  concerns — OAuth 2.0, API keys, AES-256-GCM credential encryption, an HTTP
+  client with exponential-backoff retry, HMAC webhook signing, integration
+  logs, health monitoring and background sync — are built in. The NestJS
+  `IntegrationsModule` wires it to persistence, OAuth callbacks and webhooks.
 - **Framework-free availability engine** (`packages/utils/src/scheduling`) —
   pure, DST-correct slot generation with buffers, minimum notice, rolling
   windows and per-slot seat accounting. 97%+ test coverage.
@@ -123,6 +135,15 @@ pnpm dev              # runs api (:4000) and web (:3000) via Turborepo
 | GET    | `/api/v1/public/event-types/:id/availability`               | public      |
 | POST   | `/api/v1/public/bookings`                                   | public      |
 | POST   | `/api/v1/public/bookings/:reference/cancel`                 | public      |
+| GET    | `/api/v1/integrations/catalog`                              | org member  |
+| CRUD   | `/api/v1/integrations/connections`                          | org member  |
+| POST   | `/api/v1/integrations/connections/:id/verify`               | org member  |
+| GET    | `/api/v1/integrations/logs`                                 | org member  |
+| POST   | `/api/v1/integrations/oauth/authorize`                      | org member  |
+| GET    | `/api/v1/integrations/oauth/callback`                       | public      |
+| CRUD   | `/api/v1/integrations/webhook-endpoints`                    | org member  |
+| GET    | `/api/v1/integrations/webhook-deliveries`                   | org member  |
+| POST   | `/api/v1/integrations/webhooks/inbound/:connectionId`       | public      |
 
 ## Deployment
 
@@ -131,12 +152,34 @@ Production images are defined in `apps/api/Dockerfile` and `apps/web/Dockerfile`
 brings up the entire stack. CI (`.github/workflows/ci.yml`) runs lint,
 typecheck, tests, app builds, and Docker image smoke builds.
 
+## Integrations
+
+The platform ships a complete, extensible integration system
+(`packages/integrations` + the API `IntegrationsModule`):
+
+| Category   | Providers                                             |
+| ---------- | ----------------------------------------------------- |
+| Calendar   | Google Calendar · Microsoft Outlook · Apple (CalDAV)  |
+| Video      | Google Meet · Zoom · Microsoft Teams                  |
+| Payment    | Stripe · Razorpay · PayPal                            |
+| Email      | Resend · SMTP · Mailgun                               |
+| SMS        | Twilio · MessageBird                                  |
+| CRM        | HubSpot · Salesforce · Zoho CRM · Pipedrive           |
+| Automation | Zapier · Make · n8n                                   |
+| Messaging  | Slack · Microsoft Teams · Discord                     |
+
+Cross-cutting capabilities: OAuth 2.0 + API-key connection flows, encrypted
+credentials at rest, an append-only integration audit log, exponential-backoff
+retries, inbound/outbound signed webhooks, per-connection health monitoring and
+interval-based background sync. To add a provider, implement the relevant
+capability interface and register it — no framework changes required.
+
 ## Roadmap (next phases)
 
-- Calendar sync (Google / Microsoft / Apple) and video links (Meet / Zoom / Teams)
-- Notifications (Resend email, Twilio SMS) and reminders via BullMQ
-- Billing (Stripe), round-robin & collective event types, SSO/SAML
-- Realtime updates (WebSockets), analytics, and audit logging
+- Bind the integration framework into the booking lifecycle (auto calendar
+  events, video links, CRM sync, notifications) and reminders via BullMQ
+- Round-robin & collective event types, SSO/SAML
+- Realtime updates (WebSockets), analytics, and richer audit dashboards
 
 ## License
 

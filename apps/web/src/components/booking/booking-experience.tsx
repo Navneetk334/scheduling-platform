@@ -127,7 +127,7 @@ export function BookingExperience({ page }: { page: BookingPage }) {
               onSelect={setSelectedSlot}
             />
           ) : (
-            <form onSubmit={onSubmit} className="space-y-4" noValidate>
+            <form onSubmit={(event) => void onSubmit(event)} className="space-y-4" noValidate>
               <div className="flex items-center justify-between">
                 <Badge variant="secondary" className="gap-1">
                   <CalendarCheck className="size-3" aria-hidden />
