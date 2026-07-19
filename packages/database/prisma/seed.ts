@@ -31,17 +31,19 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   member: ['meetingtype.manage', 'availability.manage', 'booking.read', 'booking.write'],
 };
 
+// Keys align with the billing catalog tiers in @invincible/utils.
 const PLANS = [
   { key: 'free', name: 'Free', priceAmount: 0, interval: 'MONTH' as const, sortOrder: 0 },
-  { key: 'pro', name: 'Pro', priceAmount: 1500, interval: 'MONTH' as const, sortOrder: 1 },
-  { key: 'team', name: 'Team', priceAmount: 4900, interval: 'MONTH' as const, sortOrder: 2 },
+  { key: 'starter', name: 'Starter', priceAmount: 1_200, interval: 'MONTH' as const, sortOrder: 1 },
+  { key: 'professional', name: 'Professional', priceAmount: 2_900, interval: 'MONTH' as const, sortOrder: 2 },
+  { key: 'business', name: 'Business', priceAmount: 4_900, interval: 'MONTH' as const, sortOrder: 3 },
   {
     key: 'enterprise',
     name: 'Enterprise',
     priceAmount: 0,
     interval: 'MONTH' as const,
     isPublic: false,
-    sortOrder: 3,
+    sortOrder: 4,
   },
 ];
 

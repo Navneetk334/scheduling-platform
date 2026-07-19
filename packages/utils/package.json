@@ -21,6 +21,11 @@
       "types": "./dist/validation/index.d.ts",
       "import": "./dist/validation/index.js",
       "require": "./dist/validation/index.cjs"
+    },
+    "./billing": {
+      "types": "./dist/billing/index.d.ts",
+      "import": "./dist/billing/index.js",
+      "require": "./dist/billing/index.cjs"
     }
   },
   "files": ["dist"],

@@ -15,6 +15,7 @@ import { GraphqlModule } from './graphql/graphql.module';
 import { HealthModule } from './health/health.module';
 import { JobsModule } from './jobs/jobs.module';
 import { AvailabilityModule } from './modules/availability/availability.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { MeetingTypesModule } from './modules/meeting-types/meeting-types.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
@@ -58,6 +59,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     MeetingTypesModule,
     AvailabilityModule,
     BookingsModule,
+    BillingModule,
     WebhooksModule,
     JobsModule,
     PublicModule,

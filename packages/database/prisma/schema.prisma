@@ -150,6 +150,22 @@ enum PaymentStatus {
 
 enum PaymentProvider {
   STRIPE
+  PAYPAL
+  RAZORPAY
+  MANUAL
+}
+
+enum ReferralStatus {
+  PENDING
+  CONVERTED
+  REWARDED
+  EXPIRED
+}
+
+enum UsageMetric {
+  BOOKINGS
+  STORAGE_GB
+  API_REQUESTS
 }
 
 enum CouponType {
@@ -363,6 +379,10 @@ model Organization {
   payments          Payment[]
   coupons           Coupon[]
   couponRedemptions CouponRedemption[]
+  paymentMethods    PaymentMethod[]
+  usageRecords      UsageRecord[]
+  referralsMade     Referral[]         @relation("Referrer")
+  referralsReceived Referral[]         @relation("Referred")
 
   // Branding & distribution
   branding Branding?
@@ -1073,12 +1093,15 @@ model Subscription {
   organizationId       String             @unique
   planId               String
   status               SubscriptionStatus @default(TRIALING)
+  interval             BillingInterval    @default(MONTH)
   seats                Int                @default(1)
   stripeCustomerId     String?
   stripeSubscriptionId String?            @unique
   currentPeriodStart   DateTime?
   currentPeriodEnd     DateTime?
   trialEndsAt          DateTime?
+  gracePeriodEndsAt    DateTime?
+  lastPaymentFailedAt  DateTime?
   cancelAtPeriodEnd    Boolean            @default(false)
   canceledAt           DateTime?
   createdAt            DateTime           @default(now())
@@ -1103,6 +1126,9 @@ model Invoice {
   total           Int           @default(0)
   amountPaid      Int           @default(0)
   amountDue       Int           @default(0)
+  taxType         String? // GST | VAT | SALES | NONE
+  taxRatePct      Int? // whole-number percentage, e.g. 18
+  taxCountry      String?
   dueDate         DateTime?
   issuedAt        DateTime?
   paidAt          DateTime?
@@ -1145,6 +1171,8 @@ model Payment {
   providerPaymentId String?
   method            String?
   refundedAmount    Int             @default(0)
+  failureReason     String?
+  retryCount        Int             @default(0)
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -1263,4 +1291,84 @@ model Domain {
 
   @@index([organizationId])
   @@map("domains")
+}
+
+
+// ===========================================================================
+// Billing extensions: payment methods, usage metering, referrals, campaigns
+// ===========================================================================
+
+model PaymentMethod {
+  id             String          @id @default(cuid())
+  organizationId String
+  gateway        PaymentProvider @default(STRIPE)
+  brand          String? // visa, mastercard, amex…
+  last4          String?
+  expMonth       Int?
+  expYear        Int?
+  isDefault      Boolean         @default(false)
+  externalId     String? // gateway token / payment-method id
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("payment_methods")
+}
+
+/// Metered usage aggregated per billing period (drives usage-based charges).
+model UsageRecord {
+  id             String      @id @default(cuid())
+  organizationId String
+  metric         UsageMetric
+  quantity       Int         @default(0)
+  periodStart    DateTime
+  periodEnd      DateTime
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, metric, periodStart])
+  @@index([organizationId, metric])
+  @@map("usage_records")
+}
+
+model Referral {
+  id                     String         @id @default(cuid())
+  code                   String         @unique
+  referrerOrganizationId String
+  referredOrganizationId String?
+  discountPercent        Int            @default(20)
+  status                 ReferralStatus @default(PENDING)
+  rewardedAt             DateTime?
+  expiresAt              DateTime?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  referrer Organization  @relation("Referrer", fields: [referrerOrganizationId], references: [id], onDelete: Cascade)
+  referred Organization? @relation("Referred", fields: [referredOrganizationId], references: [id])
+
+  @@index([referrerOrganizationId])
+  @@map("referrals")
+}
+
+/// Platform-wide discount campaigns (not tenant-scoped).
+model DiscountCampaign {
+  id             String     @id @default(cuid())
+  name           String
+  code           String     @unique
+  type           CouponType @default(PERCENT)
+  amountOff      Int
+  currency       String?
+  startsAt       DateTime?
+  endsAt         DateTime?
+  maxRedemptions Int?
+  timesRedeemed  Int        @default(0)
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@map("discount_campaigns")
 }

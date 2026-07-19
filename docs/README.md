@@ -15,6 +15,8 @@ Central index for platform documentation.
 - [API Reference](./api/README.md) — REST + GraphQL, auth (JWT/refresh/API keys),
   rate limiting, idempotency, errors, pagination, webhooks, jobs, observability,
   OpenAPI/SDK generation.
+- [Billing & Subscriptions](./billing.md) — plans, entitlements, proration, tax
+  (GST/VAT), discounts, dunning, gateways, and analytics.
 
 ## Engineering
 

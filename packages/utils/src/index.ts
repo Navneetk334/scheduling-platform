@@ -14,6 +14,8 @@ export * from './result';
 export * from './slug';
 export * from './validation';
 export * from './scheduling';
+export * from './billing';
 
 export * as validation from './validation';
 export * as scheduling from './scheduling';
+export * as billing from './billing';
